@@ -62,7 +62,7 @@
   <label>Descricao</label>
   <input id="tx-desc" type="text" placeholder="Ex: Supermercado">
   <label>Valor (R$)</label>
-  <input id="tx-valor" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="tx-valor" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <label>Data</label>
   <input id="tx-data" type="date">
   <label>Tipo</label>
@@ -103,7 +103,7 @@
    <option value="digital">Carteira Digital</option>
   </select>
   <label>Saldo inicial (R$)</label>
-  <input id="conta-saldo" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="conta-saldo" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <button class="btn-salvar" onclick="salvaConta()">Adicionar Conta</button>
  </div>
 </div>
@@ -120,7 +120,7 @@
    <option>Visa</option><option>Mastercard</option><option>Elo</option><option>American Express</option><option>Hipercard</option>
   </select>
   <label>Limite total (R$)</label>
-  <input id="cartao-limite" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="cartao-limite" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <label>4 ultimos digitos</label>
   <input id="cartao-digitos" type="number" maxlength="4" placeholder="0000">
   <div style="display:flex;gap:8px">
@@ -137,9 +137,9 @@
   <label>Nome da meta</label>
   <input id="meta-nome" type="text" placeholder="Ex: Viagem, Reserva...">
   <label>Valor objetivo (R$)</label>
-  <input id="meta-alvo" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="meta-alvo" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <label>Valor atual (R$)</label>
-  <input id="meta-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="meta-atual" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <label>Data alvo</label>
   <input id="meta-data" type="date">
   <button class="btn-salvar" onclick="salvaMeta()">Criar Meta</button>
@@ -150,7 +150,7 @@
  <div class="modal">
   <div class="modal-hdr"><span id="aporte-titulo">Aportar</span><button onclick="fechaModal('modal-aporte')">&#10005;</button></div>
   <label>Valor (R$)</label>
-  <input id="aporte-valor" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <input id="aporte-valor" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00">
   <button class="btn-salvar" onclick="salvaAporte()">Adicionar</button>
  </div>
 </div>
