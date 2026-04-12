@@ -322,7 +322,7 @@ function setFiltroTx(f) { filtroCurTx = f; renderPagina(); }
 
 function renderTxItem(t) {
   var cats = t.tipo === 'receita' ? getCatsReceita() : getCatsGasto();
-  var cat = cats.find(function(c) { return c.id === t.cat; }) || {nome:'Outros', emoji:'Ou', cor:'#94A3B8'};
+  var cat = cats.find(function(c) { return c.id === t.cat; }) || {nome:'Outros', icone:'&#x1F4B0;', cor:'#94A3B8'};
   var d = new Date(t.data + 'T12:00:00');
   var isRec = t.tipo === 'receita';
   var parcStr = t.parcTotal ? ' ' + t.parcAtual + '/' + t.parcTotal : '';
@@ -883,7 +883,7 @@ function renderListaCats() {
   var el = document.getElementById('lista-cats');
   if (!el) return;
   el.innerHTML = cats.map(function(c) {
-    var delBtn = c.custom ? '<button onclick="delCat('' + c.id + '')" style="color:var(--red);background:var(--rdim);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700">Excluir</button>' : '<span style="font-size:11px;color:var(--text3)">Padrao</span>';
+    var delBtn = c.custom ? '<button onclick="delCat(\"' + c.id + '\")" style="color:var(--red);background:var(--rdim);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700">Excluir</button>' : '<span style="font-size:11px;color:var(--text3)">Padrao</span>';
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">' +
       '<div style="display:flex;align-items:center;gap:10px">' +
       '<div style="width:32px;height:32px;border-radius:8px;background:' + c.cor + '22;display:flex;align-items:center;justify-content:center;font-size:16px">' + c.icone + '</div>' +
