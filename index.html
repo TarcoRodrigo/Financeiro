@@ -12,6 +12,18 @@
 <title>FinanceX</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
+<style>
+.dr-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1a1a1a;cursor:pointer;transition:background .15s;}
+.dr-item:last-child{border-bottom:none;}
+.dr-item:active{opacity:.7;}
+.dr-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.dr-info{flex:1;}
+.dr-name{font-size:14px;font-weight:600;color:#f0f0f0;}
+.dr-sub{font-size:11px;color:#555;margin-top:2px;}
+.dr-arr{font-size:20px;color:#333;}
+#drawer::-webkit-scrollbar{display:none;}
+</style>
 </head>
 <body>
 <div id="app">
@@ -22,7 +34,7 @@
       <span id="mesLabel">Abr 2026</span>
       <button onclick="mudaMes(1)">&#8250;</button>
     </div>
-    <button class="icon-btn" onclick="abM('modal-config')">&#9881;</button>
+    <button class="icon-btn" onclick="abreDrawer()">&#9776;</button>
   </header>
 
   <main id="conteudo"></main>
@@ -155,31 +167,7 @@
  </div>
 </div>
 
-<div class="overlay" id="modal-config" onclick="fcMF(event,'modal-config')">
- <div class="modal">
-  <div class="modal-hdr"><span>Configuracoes</span><button onclick="fcM('modal-config')">&#10005;</button></div>
-  <div class="config-item" onclick="abM('modal-conta');fcM('modal-config')">
-   <span>&#43; Nova Conta</span><span>&#8250;</span>
-  </div>
-  <div class="config-item" onclick="abM('modal-cartao');fcM('modal-config')">
-   <span>&#43; Novo Cartao</span><span>&#8250;</span>
-  </div>
-  <div class="config-item" onclick="exportaDados()">
-   <span>&#8595; Exportar Backup</span><span>&#8250;</span>
-  </div>
-  <div class="config-item" onclick="document.getElementById('import-file').click()">
-   <span>&#8593; Importar Backup</span><span>&#8250;</span>
-  </div>
-  <div class="config-item" onclick="abGC()">
-   <span>&#9776; Gerenciar Categorias</span><span>&#8250;</span>
-  </div>
-  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importaDados(this)">
-  <div class="config-item" style="color:#ff6b6b" onclick="limpaDados()">
-   <span>&#128465; Limpar Dados</span><span>&#8250;</span>
-  </div>
-  <div style="text-align:center;padding:16px 0;font-size:12px;color:#555">FinanceX v1.0 - Dados salvos localmente</div>
- </div>
-</div>
+
 
 
 <div class="overlay" id="modal-cats" onclick="fcMF(event,'modal-cats')">
@@ -195,6 +183,79 @@
    <button onclick="salvaNovaCat()" style="background:var(--accent);color:#000;border-radius:var(--rsm);padding:0 16px;font-weight:700;font-size:20px">+</button>
   </div>
  </div>
+</div>
+
+
+<!-- DRAWER LATERAL -->
+<div id="drawer-overlay" onclick="fechaDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:none;backdrop-filter:blur(3px);"></div>
+<div id="drawer" style="position:fixed;top:0;right:-320px;width:300px;height:100%;background:#111;z-index:700;transition:right .3s ease;overflow-y:auto;box-shadow:-4px 0 30px rgba(0,0,0,.5);display:flex;flex-direction:column;">
+  <div style="padding:calc(20px + env(safe-area-inset-top,0px)) 20px 20px;border-bottom:1px solid #222;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div style="font-family:var(--font-h);font-size:22px;font-weight:800;background:linear-gradient(120deg,#00e5a0,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">FinanceX</div>
+      <button onclick="fechaDrawer()" style="width:32px;height:32px;border-radius:50%;background:#1e1e1e;border:1px solid #333;color:#888;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="font-size:12px;color:#555;">v1.0 - Dados salvos localmente</div>
+  </div>
+
+  <!-- Secao Gerenciar -->
+  <div style="padding:16px 20px 8px;">
+    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Gerenciar</div>
+    <div class="dr-item" onclick="fechaDrawer();abM('modal-conta')">
+      <div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#x1F3E6;</div>
+      <div class="dr-info"><div class="dr-name">Nova Conta</div><div class="dr-sub">Adicionar conta bancaria</div></div>
+      <div class="dr-arr">&#8250;</div>
+    </div>
+    <div class="dr-item" onclick="fechaDrawer();abM('modal-cartao')">
+      <div class="dr-icon" style="background:rgba(167,139,250,.15);color:#a78bfa;">&#x1F4B3;</div>
+      <div class="dr-info"><div class="dr-name">Novo Cartao</div><div class="dr-sub">Adicionar cartao de credito</div></div>
+      <div class="dr-arr">&#8250;</div>
+    </div>
+    <div class="dr-item" onclick="fechaDrawer();abGC()">
+      <div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#9776;</div>
+      <div class="dr-info"><div class="dr-name">Categorias</div><div class="dr-sub">Criar e excluir categorias</div></div>
+      <div class="dr-arr">&#8250;</div>
+    </div>
+  </div>
+
+  <!-- Secao Dados -->
+  <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
+    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Dados</div>
+    <div class="dr-item" onclick="exportaDados()">
+      <div class="dr-icon" style="background:rgba(0,229,160,.15);color:#00e5a0;">&#8595;</div>
+      <div class="dr-info"><div class="dr-name">Exportar Backup</div><div class="dr-sub">Baixar arquivo JSON</div></div>
+      <div class="dr-arr">&#8250;</div>
+    </div>
+    <div class="dr-item" onclick="document.getElementById('import-file').click()">
+      <div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#8593;</div>
+      <div class="dr-info"><div class="dr-name">Importar Backup</div><div class="dr-sub">Restaurar arquivo JSON</div></div>
+      <div class="dr-arr">&#8250;</div>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importaDados(this)">
+  </div>
+
+  <!-- Secao Privacidade -->
+  <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
+    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Privacidade</div>
+    <div class="dr-item" style="cursor:default;">
+      <div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#x1F441;</div>
+      <div class="dr-info"><div class="dr-name">Modo Privado</div><div class="dr-sub">Ocultar valores na tela</div></div>
+      <label style="position:relative;width:44px;height:24px;flex-shrink:0;">
+        <input type="checkbox" id="privToggle" onchange="setPrivacy(this.checked)" style="opacity:0;width:0;height:0;">
+        <span id="toggleSlider" style="position:absolute;inset:0;background:#2a2a2a;border-radius:12px;cursor:pointer;transition:.2s;"></span>
+        <span id="toggleThumb" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#555;border-radius:50%;transition:.2s;"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Secao Perigo -->
+  <div style="padding:8px 20px 30px;border-top:1px solid #1a1a1a;margin-top:auto;">
+    <div style="font-size:10px;font-weight:700;color:#3a1a1a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Zona de Perigo</div>
+    <div class="dr-item" onclick="limpaDados()" style="border-color:#2a1a1a;">
+      <div class="dr-icon" style="background:rgba(255,107,107,.15);color:#ff6b6b;">&#128465;</div>
+      <div class="dr-info"><div class="dr-name" style="color:#ff6b6b;">Limpar Todos os Dados</div><div class="dr-sub">Acao irreversivel</div></div>
+      <div class="dr-arr" style="color:#ff6b6b;">&#8250;</div>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>

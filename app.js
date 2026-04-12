@@ -1,3 +1,33 @@
+
+// DRAWER LATERAL
+function abreDrawer() {
+  document.getElementById('drawer').style.right = '0';
+  document.getElementById('drawer-overlay').style.display = 'block';
+  // Sync privacy toggle
+  var pt = document.getElementById('privToggle');
+  if (pt) {
+    pt.checked = (localStorage.getItem('fx_privacy') === '1');
+    atualizaToggle(pt.checked);
+  }
+}
+function fechaDrawer() {
+  document.getElementById('drawer').style.right = '-320px';
+  document.getElementById('drawer-overlay').style.display = 'none';
+}
+function atualizaToggle(on) {
+  var slider = document.getElementById('toggleSlider');
+  var thumb = document.getElementById('toggleThumb');
+  if (!slider || !thumb) return;
+  slider.style.background = on ? '#00e5a0' : '#2a2a2a';
+  thumb.style.background = on ? '#000' : '#555';
+  thumb.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+}
+function setPrivacy(on) {
+  localStorage.setItem('fx_privacy', on ? '1' : '0');
+  atualizaToggle(on);
+  renderPag();
+}
+
 // FINANCEX app.js - reescrito do zero
 // Ordem correta: mascaras > constantes > estado > storage > helpers > renders > modais > init
 
