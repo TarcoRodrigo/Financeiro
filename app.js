@@ -860,10 +860,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 
-// ==================== INIT ====================
-atualizaMesLabel();
-renderPagina();
-
 // == GERENCIAR CATEGORIAS ==
 var catTipoGerenciar = 'gasto';
 function abreGerenciarCats() {
@@ -904,3 +900,9 @@ function salvaNovaCat() {
   renderListaCats();
   toast('Categoria criada', 'ok');
 }
+
+
+
+// ==================== INIT ====================
+atualizaMesLabel();
+renderPagina();
