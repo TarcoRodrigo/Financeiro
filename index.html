@@ -55,7 +55,7 @@
 <div class="overlay" id="modal-tx" onclick="fechaModalFora(event,'modal-tx')">
  <div class="modal">
   <div class="modal-hdr"><span id="modal-tx-titulo">Novo Lancamento</span><button onclick="fechaModal('modal-tx')">&#10005;</button></div>
-  <div class="tipo-toggle">
+  <div class="tipo-toggle" id="tipo-toggle">
    <button id="btn-despesa" class="tipo-btn ativo-d" onclick="setTipo('despesa')">Despesa</button>
    <button id="btn-receita" class="tipo-btn" onclick="setTipo('receita')">Receita</button>
   </div>
@@ -175,6 +175,22 @@
    <span>&#128465; Limpar Dados</span><span>&#8250;</span>
   </div>
   <div style="text-align:center;padding:16px 0;font-size:12px;color:#555">FinanceX v1.0 - Dados salvos localmente</div>
+ </div>
+</div>
+
+
+<div class="overlay" id="modal-cats" onclick="fechaModalFora(event,'modal-cats')">
+ <div class="modal">
+  <div class="modal-hdr"><span>Gerenciar Categorias</span><button onclick="fechaModal('modal-cats')">&#10005;</button></div>
+  <div class="tipo-toggle" style="margin-bottom:12px">
+   <button id="btn-cats-gasto" class="tipo-btn ativo-d" onclick="setCatTipoGerenciar('gasto')">Gastos</button>
+   <button id="btn-cats-rec" class="tipo-btn" onclick="setCatTipoGerenciar('receita')">Receitas</button>
+  </div>
+  <div id="lista-cats"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+   <input id="nova-cat-nome" type="text" placeholder="Nome da nova categoria" class="finput" style="flex:1">
+   <button onclick="salvaNovaCat()" style="background:var(--accent);color:#000;border-radius:var(--rsm);padding:0 16px;font-weight:700;font-size:20px">+</button>
+  </div>
  </div>
 </div>
 

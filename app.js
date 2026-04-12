@@ -1,3 +1,32 @@
+
+function getCatsGasto() {
+  var d = getData();
+  return getCatsGasto().concat(d.cats_custom_gasto || []);
+}
+function getCatsReceita() {
+  var d = getData();
+  return CATS_RECEITA.concat(d.cats_custom_receita || []);
+}
+function getCatById(id) {
+  return getCatsGasto().find(function(c){return c.id===id;}) ||
+         getCatsReceita().find(function(c){return c.id===id;}) ||
+         {nome:'Outros', icone:'&#x1F4B0;', cor:'#94A3B8'};
+}
+function adicionaCatCustom(tipo, nome) {
+  if (!nome.trim()) return;
+  var d = getData();
+  var id = 'custom_' + Date.now();
+  var nova = {id:id, nome:nome.trim(), icone:'&#x1F4B0;', cor:'#94A3B8', custom:true};
+  if (tipo === 'gasto') d.cats_custom_gasto.push(nova);
+  else d.cats_custom_receita.push(nova);
+  salva(d);
+}
+function excluiCat(tipo, id) {
+  var d = getData();
+  if (tipo === 'gasto') d.cats_custom_gasto = d.cats_custom_gasto.filter(function(c){return c.id!==id;});
+  else d.cats_custom_receita = d.cats_custom_receita.filter(function(c){return c.id!==id;});
+  salva(d);
+}
 // Mascara monetaria - tipo caixa registradora
 function mascaraDinheiro(el) {
   var v = el.value.replace(/\D/g, '');
@@ -16,43 +45,46 @@ function parseValor(id) {
 
 // ==================== DADOS ====================
 var BANCOS = [
-  {id:'nubank',nome:'Nubank',emoji:'Nu',cor:'#820AD1'},
-  {id:'itau',nome:'Itau',emoji:'It',cor:'#EC7000'},
-  {id:'bradesco',nome:'Bradesco',emoji:'Bd',cor:'#CC0000'},
-  {id:'santander',nome:'Santander',emoji:'Sa',cor:'#CC0000'},
-  {id:'bb',nome:'Banco do Brasil',emoji:'BB',cor:'#F5A623'},
-  {id:'caixa',nome:'Caixa',emoji:'Cx',cor:'#0070AF'},
-  {id:'inter',nome:'Inter',emoji:'It',cor:'#FF6B00'},
-  {id:'c6',nome:'C6 Bank',emoji:'C6',cor:'#333'},
-  {id:'next',nome:'Next',emoji:'Nx',cor:'#00CC66'},
-  {id:'picpay',nome:'PicPay',emoji:'PP',cor:'#21C25E'},
-  {id:'neon',nome:'Neon',emoji:'Ne',cor:'#0066FF'},
-  {id:'mercadopago',nome:'Mercado Pago',emoji:'MP',cor:'#009EE3'},
-  {id:'outro',nome:'Outro',emoji:'?',cor:'#888'}
+  {id:'nubank',    nome:'Nubank',        sigla:'Nu', cor:'#820AD1', texto:'#fff'},
+  {id:'itau',      nome:'Itau',          sigla:'It', cor:'#EC7000', texto:'#fff'},
+  {id:'bradesco',  nome:'Bradesco',      sigla:'Bd', cor:'#CC0000', texto:'#fff'},
+  {id:'santander', nome:'Santander',     sigla:'Sa', cor:'#EC0000', texto:'#fff'},
+  {id:'bb',        nome:'Banco do Brasil',sigla:'BB', cor:'#F5A623', texto:'#003300'},
+  {id:'caixa',     nome:'Caixa',         sigla:'Cx', cor:'#005CA9', texto:'#fff'},
+  {id:'inter',     nome:'Inter',         sigla:'In', cor:'#FF6B00', texto:'#fff'},
+  {id:'c6',        nome:'C6 Bank',       sigla:'C6', cor:'#222222', texto:'#fff'},
+  {id:'next',      nome:'Next',          sigla:'Nx', cor:'#00C060', texto:'#fff'},
+  {id:'picpay',    nome:'PicPay',        sigla:'PP', cor:'#21C25E', texto:'#fff'},
+  {id:'neon',      nome:'Neon',          sigla:'Ne', cor:'#00CFFF', texto:'#000'},
+  {id:'mercadopago',nome:'Mercado Pago', sigla:'MP', cor:'#009EE3', texto:'#fff'},
+  {id:'sicredi',   nome:'Sicredi',       sigla:'Si', cor:'#008542', texto:'#fff'},
+  {id:'sicoob',    nome:'Sicoob',        sigla:'Sc', cor:'#005697', texto:'#fff'},
+  {id:'bnb',       nome:'Banco do NE',   sigla:'BN', cor:'#009640', texto:'#fff'},
+  {id:'outro',     nome:'Outro',         sigla:'?',  cor:'#444444', texto:'#fff'}
 ];
 
 var CATS_GASTO = [
-  {id:'alimentacao',nome:'Alimentacao',emoji:'Al',cor:'#FB923C'},
-  {id:'transporte',nome:'Transporte',emoji:'Tr',cor:'#60A5FA'},
-  {id:'saude',nome:'Saude',emoji:'Sa',cor:'#34D399'},
-  {id:'moradia',nome:'Moradia',emoji:'Mo',cor:'#FBBF24'},
-  {id:'educacao',nome:'Educacao',emoji:'Ed',cor:'#A78BFA'},
-  {id:'lazer',nome:'Lazer',emoji:'Lz',cor:'#F472B6'},
-  {id:'vestuario',nome:'Vestuario',emoji:'Ve',cor:'#E879F9'},
-  {id:'supermercado',nome:'Supermercado',emoji:'Sm',cor:'#4ADE80'},
-  {id:'contas',nome:'Contas',emoji:'Co',cor:'#FCD34D'},
-  {id:'pet',nome:'Pet',emoji:'Pt',cor:'#FB7185'},
-  {id:'viagem',nome:'Viagem',emoji:'Vi',cor:'#38BDF8'},
-  {id:'outros',nome:'Outros',emoji:'Ou',cor:'#94A3B8'}
+  {id:'alimentacao', nome:'Alimentacao', icone:'&#x1F374;', cor:'#FB923C'},
+  {id:'transporte',  nome:'Transporte',  icone:'&#x1F697;', cor:'#60A5FA'},
+  {id:'saude',       nome:'Saude',       icone:'&#x2665;',  cor:'#F87171'},
+  {id:'moradia',     nome:'Moradia',     icone:'&#x1F3E0;', cor:'#FBBF24'},
+  {id:'educacao',    nome:'Educacao',    icone:'&#x1F4DA;', cor:'#A78BFA'},
+  {id:'lazer',       nome:'Lazer',       icone:'&#x1F3AE;', cor:'#F472B6'},
+  {id:'vestuario',   nome:'Vestuario',   icone:'&#x1F455;', cor:'#E879F9'},
+  {id:'supermercado',nome:'Supermercado',icone:'&#x1F6D2;', cor:'#4ADE80'},
+  {id:'contas',      nome:'Contas',      icone:'&#x1F4A1;', cor:'#FCD34D'},
+  {id:'pet',         nome:'Pet',         icone:'&#x1F43E;', cor:'#FB7185'},
+  {id:'viagem',      nome:'Viagem',      icone:'&#x2708;',  cor:'#38BDF8'},
+  {id:'outros',      nome:'Outros',      icone:'&#x1F4B0;', cor:'#94A3B8'}
 ];
 
 var CATS_RECEITA = [
-  {id:'salario',nome:'Salario',emoji:'$',cor:'#00E5A0'},
-  {id:'freelance',nome:'Freelance',emoji:'PC',cor:'#38BDF8'},
-  {id:'investimento',nome:'Investimento',emoji:'$+',cor:'#34D399'},
-  {id:'aluguel_rec',nome:'Aluguel',emoji:'Al',cor:'#FBBF24'},
-  {id:'bonus',nome:'Bonus',emoji:'Bx',cor:'#F472B6'},
-  {id:'outros_rec',nome:'Outros',emoji:'Ou',cor:'#94A3B8'}
+  {id:'salario',     nome:'Salario',     icone:'&#x1F4B5;', cor:'#00E5A0'},
+  {id:'freelance',   nome:'Freelance',   icone:'&#x1F4BB;', cor:'#38BDF8'},
+  {id:'investimento',nome:'Investimento',icone:'&#x1F4C8;', cor:'#34D399'},
+  {id:'aluguel_rec', nome:'Aluguel',     icone:'&#x1F3E0;', cor:'#FBBF24'},
+  {id:'bonus',       nome:'Bonus',       icone:'&#x1F381;', cor:'#F472B6'},
+  {id:'outros_rec',  nome:'Outros',      icone:'&#x1F4B0;', cor:'#94A3B8'}
 ];
 
 var MES_NOMES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -82,6 +114,8 @@ function getData() {
   if (!d.cartoes) d.cartoes = [];
   if (!d.transacoes) d.transacoes = [];
   if (!d.metas) d.metas = [];
+  if (!d.cats_custom_gasto) d.cats_custom_gasto = [];
+  if (!d.cats_custom_receita) d.cats_custom_receita = [];
   return d;
 }
 
@@ -287,14 +321,14 @@ function renderLancamentos() {
 function setFiltroTx(f) { filtroCurTx = f; renderPagina(); }
 
 function renderTxItem(t) {
-  var cats = t.tipo === 'receita' ? CATS_RECEITA : CATS_GASTO;
+  var cats = t.tipo === 'receita' ? getCatsReceita() : getCatsGasto();
   var cat = cats.find(function(c) { return c.id === t.cat; }) || {nome:'Outros', emoji:'Ou', cor:'#94A3B8'};
   var d = new Date(t.data + 'T12:00:00');
   var isRec = t.tipo === 'receita';
   var parcStr = t.parcTotal ? ' ' + t.parcAtual + '/' + t.parcTotal : '';
   var fixoStr = t.fixo === 'fixo' ? ' Fixo' : '';
   return '<div class="tx-item">' +
-    '<div class="tx-icone" style="background:' + cat.cor + '22;color:' + cat.cor + '">' + cat.emoji + '</div>' +
+    '<div class="tx-icone" style="background:' + cat.cor + '22;color:' + cat.cor + '">' + cat.icone + '</div>' +
     '<div class="tx-info"><div class="tx-nome">' + t.desc + '</div><div class="tx-cat">' + cat.nome + parcStr + fixoStr + '</div></div>' +
     '<div class="tx-right"><div class="tx-valor ' + (isRec?'g':'') + '">' + (isRec?'+':'-') + fmtR(t.valor) + '</div>' +
     '<div class="tx-data">' + d.getDate() + ' ' + MES_CURTOS[d.getMonth()] + '</div></div>' +
@@ -349,11 +383,7 @@ function renderCartoes() {
   html += '</div>';
 
   // Fatura atual
-  var fatura = d.transacoes.filter(function(t) {
-    if (!t.cartaoId || t.cartaoId !== c.id) return false;
-    var dt = new Date(t.data + 'T12:00:00');
-    return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
-  });
+  var fatura = getFaturaCartao(c, d.transacoes);
 
   html += '<div class="sec-hdr"><span class="sec-titulo">Fatura Atual</span><span style="font-size:12px;color:var(--text2)">' + fmtR(fatura.reduce(function(a,t){return a+t.valor;},0)) + '</span></div>';
   html += '<div class="card">';
@@ -383,12 +413,39 @@ function renderCartoes() {
   return html;
 }
 
+function calcCicloCartao(cartao) {
+  var diaFecha = parseInt(cartao.diaFecha) || 1;
+  var hoje = new Date();
+  var diaHoje = hoje.getDate();
+  var mesHoje = hoje.getMonth();
+  var anoHoje = hoje.getFullYear();
+  var inicio, fim;
+  if (diaHoje > diaFecha) {
+    inicio = new Date(anoHoje, mesHoje, diaFecha + 1);
+    fim    = new Date(anoHoje, mesHoje + 1, diaFecha + 1);
+  } else {
+    inicio = new Date(anoHoje, mesHoje - 1, diaFecha + 1);
+    fim    = new Date(anoHoje, mesHoje, diaFecha + 1);
+  }
+  return { inicio: inicio, fim: fim };
+}
+
 function calcUsadoCartao(cartao, transacoes) {
+  var ciclo = calcCicloCartao(cartao);
   return transacoes.filter(function(t) {
     if (!t.cartaoId || t.cartaoId !== cartao.id) return false;
     var d = new Date(t.data + 'T12:00:00');
-    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    return d >= ciclo.inicio && d < ciclo.fim;
   }).reduce(function(a,t) { return a + t.valor; }, 0);
+}
+
+function getFaturaCartao(cartao, transacoes) {
+  var ciclo = calcCicloCartao(cartao);
+  return transacoes.filter(function(t) {
+    if (!t.cartaoId || t.cartaoId !== cartao.id) return false;
+    var d = new Date(t.data + 'T12:00:00');
+    return d >= ciclo.inicio && d < ciclo.fim;
+  });
 }
 
 function getParcsFuturas(transacoes) {
@@ -398,7 +455,7 @@ function getParcsFuturas(transacoes) {
 function abreTxCartao() {
   var d = getData();
   var c = d.cartoes[cartaoDetalheIdx];
-  abreTx('despesa');
+  abreTx('despesa', true);
   setTimeout(function() {
     var sel = document.getElementById('tx-conta');
     if (sel && c) {
@@ -485,7 +542,7 @@ function renderRelatorios() {
       var cat = CATS_GASTO.find(function(c){return c.id===catId;}) || {nome:catId,emoji:'Ou',cor:'#888'};
       var pct = total > 0 ? (catMap[catId]/total)*100 : 0;
       html += '<div class="bud-item">';
-      html += '<div class="bud-hdr"><div class="bud-cat"><span>' + cat.emoji + '</span>' + cat.nome + '</div><div class="bud-vals">' + fmtR(catMap[catId]) + ' (' + pct.toFixed(0) + '%)</div></div>';
+      html += '<div class="bud-hdr"><div class="bud-cat"><span>' + cat.icone + '</span>' + cat.nome + '</div><div class="bud-vals">' + fmtR(catMap[catId]) + ' (' + pct.toFixed(0) + '%)</div></div>';
       html += '<div class="bud-barra"><div class="bud-fill" style="width:' + pct + '%;background:' + cat.cor + '"></div></div>';
       html += '</div>';
     });
@@ -576,7 +633,7 @@ function selBanco(id, tipo) {
 }
 
 // ==================== TX MODAL ====================
-function abreTx(tipo) {
+function abreTx(tipo, somenteCartao) {
   tipoTxAtual = tipo;
   document.getElementById('tx-desc').value = '';
   document.getElementById('tx-valor').value = '';
@@ -586,6 +643,8 @@ function abreTx(tipo) {
   document.getElementById('tx-parc-atual').value = '';
   document.getElementById('grupo-parcela').style.display = 'none';
 
+  var toggle = document.getElementById('tipo-toggle');
+  if (toggle) toggle.style.display = somenteCartao ? 'none' : 'grid';
   setTipo(tipo);
   buildCatSelect(tipo);
   buildContaSelect(tipo);
@@ -613,9 +672,9 @@ function setTipo(tipo) {
 function buildCatSelect(tipo) {
   var sel = document.getElementById('tx-cat');
   if (!sel) return;
-  var cats = tipo === 'receita' ? CATS_RECEITA : CATS_GASTO;
+  var cats = tipo === 'receita' ? getCatsReceita() : getCatsGasto();
   sel.innerHTML = cats.map(function(c) {
-    return '<option value="' + c.id + '">' + c.emoji + ' ' + c.nome + '</option>';
+    return '<option value="' + c.id + '">' + c.nome + '</option>';
   }).join('');
 }
 
@@ -804,3 +863,44 @@ if ('serviceWorker' in navigator) {
 // ==================== INIT ====================
 atualizaMesLabel();
 renderPagina();
+
+// == GERENCIAR CATEGORIAS ==
+var catTipoGerenciar = 'gasto';
+function abreGerenciarCats() {
+  fechaModal('modal-config');
+  catTipoGerenciar = 'gasto';
+  renderListaCats();
+  abreModal('modal-cats');
+}
+function setCatTipoGerenciar(tipo) {
+  catTipoGerenciar = tipo;
+  document.getElementById('btn-cats-gasto').className = 'tipo-btn' + (tipo==='gasto'?' ativo-d':'');
+  document.getElementById('btn-cats-rec').className = 'tipo-btn' + (tipo==='receita'?' ativo-r':'');
+  renderListaCats();
+}
+function renderListaCats() {
+  var cats = catTipoGerenciar === 'gasto' ? getCatsGasto() : getCatsReceita();
+  var el = document.getElementById('lista-cats');
+  if (!el) return;
+  el.innerHTML = cats.map(function(c) {
+    var delBtn = c.custom ? '<button onclick="delCat('' + c.id + '')" style="color:var(--red);background:var(--rdim);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700">Excluir</button>' : '<span style="font-size:11px;color:var(--text3)">Padrao</span>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+      '<div style="width:32px;height:32px;border-radius:8px;background:' + c.cor + '22;display:flex;align-items:center;justify-content:center;font-size:16px">' + c.icone + '</div>' +
+      '<span style="font-size:14px;font-weight:500">' + c.nome + '</span></div>' +
+      delBtn + '</div>';
+  }).join('');
+}
+function delCat(id) {
+  excluiCat(catTipoGerenciar, id);
+  renderListaCats();
+  toast('Categoria excluida', 'ok');
+}
+function salvaNovaCat() {
+  var nome = document.getElementById('nova-cat-nome').value.trim();
+  if (!nome) { toast('Informe o nome', 'err'); return; }
+  adicionaCatCustom(catTipoGerenciar, nome);
+  document.getElementById('nova-cat-nome').value = '';
+  renderListaCats();
+  toast('Categoria criada', 'ok');
+}
