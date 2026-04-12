@@ -1,14 +1,17 @@
-// Converte valor com virgula ou ponto para float
-function parseValor(v) {
+// Mascara monetaria - tipo caixa registradora
+function mascaraDinheiro(el) {
+  var v = el.value.replace(/\D/g, '');
+  if (!v) { el.value = ''; return; }
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  el.value = v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// Le valor do campo com mascara e retorna float
+function parseValor(id) {
+  var v = document.getElementById(id).value;
   if (!v) return 0;
-  // Remove tudo exceto numeros, virgula e ponto
-  v = String(v).trim().replace(/[^0-9.,]/g, '');
-  // Se tiver virgula como decimal (ex: 1.234,56 ou 1,56)
-  if (v.indexOf(',') !== -1) {
-    // Remove pontos de milhar e troca virgula por ponto
-    v = v.replace(/\./g, '').replace(',', '.');
-  }
-  return parseFloat(v) || 0;
+  // Remove pontos de milhar, troca virgula por ponto
+  return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
 // ==================== DADOS ====================
@@ -635,7 +638,7 @@ function buildContaSelect(tipo) {
 
 function salvaTx() {
   var desc = document.getElementById('tx-desc').value.trim();
-  var valor = parseValor(document.getElementById('tx-valor').value);
+  var valor = parseValor('tx-valor');
   var data = document.getElementById('tx-data').value;
   var fixo = document.getElementById('tx-fixo').value;
   var cat = document.getElementById('tx-cat').value;
@@ -675,7 +678,7 @@ function salvaConta() {
   if (!bancoContaSel) { toast('Selecione o banco','err'); return; }
   var nome = document.getElementById('conta-nome').value.trim();
   var tipo = document.getElementById('conta-tipo').value;
-  var saldo = parseValor(document.getElementById('conta-saldo').value);
+  var saldo = parseValor('conta-saldo');
   var d = getData();
   d.contas.push({ id:uid(), banco:bancoContaSel, nome:nome, tipo:tipo, saldo:saldo });
   salva(d);
@@ -692,7 +695,7 @@ function salvaCartao() {
   if (!bancoCartaoSel) { toast('Selecione o banco','err'); return; }
   var nome = document.getElementById('cartao-nome').value.trim();
   var bandeira = document.getElementById('cartao-bandeira').value;
-  var limite = parseValor(document.getElementById('cartao-limite').value);
+  var limite = parseValor('cartao-limite');
   var digitos = document.getElementById('cartao-digitos').value.trim();
   var diaFecha = parseInt(document.getElementById('cartao-fecha').value) || 1;
   var diaVence = parseInt(document.getElementById('cartao-vence').value) || 10;
@@ -708,8 +711,8 @@ function salvaCartao() {
 // ==================== META ====================
 function salvaMeta() {
   var nome = document.getElementById('meta-nome').value.trim();
-  var alvo = parseValor(document.getElementById('meta-alvo').value);
-  var atual = parseValor(document.getElementById('meta-atual').value);
+  var alvo = parseValor('meta-alvo');
+  var atual = parseValor('meta-atual');
   var data = document.getElementById('meta-data').value;
   if (!nome) { toast('Informe o nome','err'); return; }
   if (!alvo) { toast('Informe o objetivo','err'); return; }
@@ -730,7 +733,7 @@ function abreAporte(i) {
 }
 
 function salvaAporte() {
-  var valor = parseValor(document.getElementById('aporte-valor').value);
+  var valor = parseValor('aporte-valor');
   if (!valor) { toast('Informe o valor','err'); return; }
   var d = getData();
   d.metas[metaAporteIdx].atual = Math.min(d.metas[metaAporteIdx].alvo * 2, d.metas[metaAporteIdx].atual + valor);
