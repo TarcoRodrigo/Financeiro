@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FinanceX">
+<link rel="manifest" href="manifest.json">
+<title>FinanceX</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="logo">FinanceX</div>
+    <div class="month-nav">
+      <button onclick="mudaMes(-1)">&#8249;</button>
+      <span id="mesLabel">Abr 2026</span>
+      <button onclick="mudaMes(1)">&#8250;</button>
+    </div>
+    <button class="icon-btn" onclick="abreModal('modal-config')">&#9881;</button>
+  </header>
+
+  <main id="conteudo"></main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-p="inicio" onclick="nav('inicio')">
+      <svg viewBox="0 0 24 24"><path d="M3 12L12 3l9 9M5 10v9h5v-5h4v5h5v-9"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-btn" data-p="lancamentos" onclick="nav('lancamentos')">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <span>Lancamentos</span>
+    </button>
+    <button class="nav-btn" data-p="cartoes" onclick="nav('cartoes')">
+      <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <span>Cartoes</span>
+    </button>
+    <button class="nav-btn" data-p="metas" onclick="nav('metas')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>Metas</span>
+    </button>
+    <button class="nav-btn" data-p="relatorios" onclick="nav('relatorios')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Relatorios</span>
+    </button>
+  </nav>
+</div>
+
+<!-- MODAIS -->
+<div class="overlay" id="modal-tx" onclick="fechaModalFora(event,'modal-tx')">
+ <div class="modal">
+  <div class="modal-hdr"><span id="modal-tx-titulo">Novo Lancamento</span><button onclick="fechaModal('modal-tx')">&#10005;</button></div>
+  <div class="tipo-toggle">
+   <button id="btn-despesa" class="tipo-btn ativo-d" onclick="setTipo('despesa')">Despesa</button>
+   <button id="btn-receita" class="tipo-btn" onclick="setTipo('receita')">Receita</button>
+  </div>
+  <label>Descricao</label>
+  <input id="tx-desc" type="text" placeholder="Ex: Supermercado">
+  <label>Valor (R$)</label>
+  <input id="tx-valor" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <label>Data</label>
+  <input id="tx-data" type="date">
+  <label>Tipo</label>
+  <select id="tx-fixo">
+   <option value="variavel">Variavel</option>
+   <option value="fixo">Fixo (repete todo mes)</option>
+  </select>
+  <label>Categoria</label>
+  <select id="tx-cat"></select>
+  <label id="label-conta">Conta</label>
+  <select id="tx-conta"></select>
+  <div id="grupo-parcela" style="display:none">
+   <label>Parcelamento</label>
+   <div style="display:flex;gap:8px">
+    <input id="tx-parc-total" type="number" min="1" max="60" placeholder="Total parcelas" style="flex:1">
+    <input id="tx-parc-atual" type="number" min="1" placeholder="Parcela atual" style="flex:1">
+   </div>
+  </div>
+  <label>Observacao</label>
+  <input id="tx-obs" type="text" placeholder="Opcional">
+  <button class="btn-salvar" onclick="salvaTx()">Salvar</button>
+ </div>
+</div>
+
+<div class="overlay" id="modal-conta" onclick="fechaModalFora(event,'modal-conta')">
+ <div class="modal">
+  <div class="modal-hdr"><span>Nova Conta</span><button onclick="fechaModal('modal-conta')">&#10005;</button></div>
+  <label>Banco</label>
+  <div class="banco-grid" id="banco-grid"></div>
+  <label>Nome personalizado (opcional)</label>
+  <input id="conta-nome" type="text" placeholder="Ex: Conta Principal">
+  <label>Tipo</label>
+  <select id="conta-tipo">
+   <option value="corrente">Conta Corrente</option>
+   <option value="poupanca">Poupanca</option>
+   <option value="investimento">Investimento</option>
+   <option value="dinheiro">Dinheiro Fisico</option>
+   <option value="digital">Carteira Digital</option>
+  </select>
+  <label>Saldo inicial (R$)</label>
+  <input id="conta-saldo" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <button class="btn-salvar" onclick="salvaConta()">Adicionar Conta</button>
+ </div>
+</div>
+
+<div class="overlay" id="modal-cartao" onclick="fechaModalFora(event,'modal-cartao')">
+ <div class="modal">
+  <div class="modal-hdr"><span>Novo Cartao</span><button onclick="fechaModal('modal-cartao')">&#10005;</button></div>
+  <label>Banco / Bandeira</label>
+  <div class="banco-grid" id="cartao-banco-grid"></div>
+  <label>Nome personalizado (opcional)</label>
+  <input id="cartao-nome" type="text" placeholder="Ex: Cartao Principal">
+  <label>Bandeira</label>
+  <select id="cartao-bandeira">
+   <option>Visa</option><option>Mastercard</option><option>Elo</option><option>American Express</option><option>Hipercard</option>
+  </select>
+  <label>Limite total (R$)</label>
+  <input id="cartao-limite" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <label>4 ultimos digitos</label>
+  <input id="cartao-digitos" type="number" maxlength="4" placeholder="0000">
+  <div style="display:flex;gap:8px">
+   <div style="flex:1"><label>Dia fechamento</label><input id="cartao-fecha" type="number" min="1" max="31" placeholder="1-31"></div>
+   <div style="flex:1"><label>Dia vencimento</label><input id="cartao-vence" type="number" min="1" max="31" placeholder="1-31"></div>
+  </div>
+  <button class="btn-salvar" onclick="salvaCartao()">Adicionar Cartao</button>
+ </div>
+</div>
+
+<div class="overlay" id="modal-meta" onclick="fechaModalFora(event,'modal-meta')">
+ <div class="modal">
+  <div class="modal-hdr"><span>Nova Meta</span><button onclick="fechaModal('modal-meta')">&#10005;</button></div>
+  <label>Nome da meta</label>
+  <input id="meta-nome" type="text" placeholder="Ex: Viagem, Reserva...">
+  <label>Valor objetivo (R$)</label>
+  <input id="meta-alvo" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <label>Valor atual (R$)</label>
+  <input id="meta-atual" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <label>Data alvo</label>
+  <input id="meta-data" type="date">
+  <button class="btn-salvar" onclick="salvaMeta()">Criar Meta</button>
+ </div>
+</div>
+
+<div class="overlay" id="modal-aporte" onclick="fechaModalFora(event,'modal-aporte')">
+ <div class="modal">
+  <div class="modal-hdr"><span id="aporte-titulo">Aportar</span><button onclick="fechaModal('modal-aporte')">&#10005;</button></div>
+  <label>Valor (R$)</label>
+  <input id="aporte-valor" type="number" inputmode="decimal" step="0.01" placeholder="0,00">
+  <button class="btn-salvar" onclick="salvaAporte()">Adicionar</button>
+ </div>
+</div>
+
+<div class="overlay" id="modal-config" onclick="fechaModalFora(event,'modal-config')">
+ <div class="modal">
+  <div class="modal-hdr"><span>Configuracoes</span><button onclick="fechaModal('modal-config')">&#10005;</button></div>
+  <div class="config-item" onclick="abreModal('modal-conta');fechaModal('modal-config')">
+   <span>&#43; Nova Conta</span><span>&#8250;</span>
+  </div>
+  <div class="config-item" onclick="abreModal('modal-cartao');fechaModal('modal-config')">
+   <span>&#43; Novo Cartao</span><span>&#8250;</span>
+  </div>
+  <div class="config-item" onclick="exportaDados()">
+   <span>&#8595; Exportar Backup</span><span>&#8250;</span>
+  </div>
+  <div class="config-item" onclick="document.getElementById('import-file').click()">
+   <span>&#8593; Importar Backup</span><span>&#8250;</span>
+  </div>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importaDados(this)">
+  <div class="config-item" style="color:#ff6b6b" onclick="limpaDados()">
+   <span>&#128465; Limpar Dados</span><span>&#8250;</span>
+  </div>
+  <div style="text-align:center;padding:16px 0;font-size:12px;color:#555">FinanceX v1.0 - Dados salvos localmente</div>
+ </div>
+</div>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
