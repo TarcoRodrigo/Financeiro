@@ -1,4 +1,4 @@
-var CACHE = 'financex-v202604120534';
+var CACHE = 'financex-v202604120541';
 var ARQUIVOS = ['./index.html', './style.css', './app.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function(e) {

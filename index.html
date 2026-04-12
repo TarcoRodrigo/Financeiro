@@ -22,7 +22,7 @@
       <span id="mesLabel">Abr 2026</span>
       <button onclick="mudaMes(1)">&#8250;</button>
     </div>
-    <button class="icon-btn" onclick="abreModal('modal-config')">&#9881;</button>
+    <button class="icon-btn" onclick="abM('modal-config')">&#9881;</button>
   </header>
 
   <main id="conteudo"></main>
@@ -52,9 +52,9 @@
 </div>
 
 <!-- MODAIS -->
-<div class="overlay" id="modal-tx" onclick="fechaModalFora(event,'modal-tx')">
+<div class="overlay" id="modal-tx" onclick="fcMF(event,'modal-tx')">
  <div class="modal">
-  <div class="modal-hdr"><span id="modal-tx-titulo">Novo Lancamento</span><button onclick="fechaModal('modal-tx')">&#10005;</button></div>
+  <div class="modal-hdr"><span id="modal-tx-titulo">Novo Lancamento</span><button onclick="fcM('modal-tx')">&#10005;</button></div>
   <div class="tipo-toggle" id="tipo-toggle">
    <button id="btn-despesa" class="tipo-btn ativo-d" onclick="setTipo('despesa')">Despesa</button>
    <button id="btn-receita" class="tipo-btn" onclick="setTipo('receita')">Receita</button>
@@ -87,9 +87,9 @@
  </div>
 </div>
 
-<div class="overlay" id="modal-conta" onclick="fechaModalFora(event,'modal-conta')">
+<div class="overlay" id="modal-conta" onclick="fcMF(event,'modal-conta')">
  <div class="modal">
-  <div class="modal-hdr"><span>Nova Conta</span><button onclick="fechaModal('modal-conta')">&#10005;</button></div>
+  <div class="modal-hdr"><span>Nova Conta</span><button onclick="fcM('modal-conta')">&#10005;</button></div>
   <label>Banco</label>
   <div class="banco-grid" id="banco-grid"></div>
   <label>Nome personalizado (opcional)</label>
@@ -108,9 +108,9 @@
  </div>
 </div>
 
-<div class="overlay" id="modal-cartao" onclick="fechaModalFora(event,'modal-cartao')">
+<div class="overlay" id="modal-cartao" onclick="fcMF(event,'modal-cartao')">
  <div class="modal">
-  <div class="modal-hdr"><span>Novo Cartao</span><button onclick="fechaModal('modal-cartao')">&#10005;</button></div>
+  <div class="modal-hdr"><span>Novo Cartao</span><button onclick="fcM('modal-cartao')">&#10005;</button></div>
   <label>Banco / Bandeira</label>
   <div class="banco-grid" id="cartao-banco-grid"></div>
   <label>Nome personalizado (opcional)</label>
@@ -131,9 +131,9 @@
  </div>
 </div>
 
-<div class="overlay" id="modal-meta" onclick="fechaModalFora(event,'modal-meta')">
+<div class="overlay" id="modal-meta" onclick="fcMF(event,'modal-meta')">
  <div class="modal">
-  <div class="modal-hdr"><span>Nova Meta</span><button onclick="fechaModal('modal-meta')">&#10005;</button></div>
+  <div class="modal-hdr"><span>Nova Meta</span><button onclick="fcM('modal-meta')">&#10005;</button></div>
   <label>Nome da meta</label>
   <input id="meta-nome" type="text" placeholder="Ex: Viagem, Reserva...">
   <label>Valor objetivo (R$)</label>
@@ -146,22 +146,22 @@
  </div>
 </div>
 
-<div class="overlay" id="modal-aporte" onclick="fechaModalFora(event,'modal-aporte')">
+<div class="overlay" id="modal-aporte" onclick="fcMF(event,'modal-aporte')">
  <div class="modal">
-  <div class="modal-hdr"><span id="aporte-titulo">Aportar</span><button onclick="fechaModal('modal-aporte')">&#10005;</button></div>
+  <div class="modal-hdr"><span id="aporte-titulo">Aportar</span><button onclick="fcM('modal-aporte')">&#10005;</button></div>
   <label>Valor (R$)</label>
   <input id="aporte-valor" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
   <button class="btn-salvar" onclick="salvaAporte()">Adicionar</button>
  </div>
 </div>
 
-<div class="overlay" id="modal-config" onclick="fechaModalFora(event,'modal-config')">
+<div class="overlay" id="modal-config" onclick="fcMF(event,'modal-config')">
  <div class="modal">
-  <div class="modal-hdr"><span>Configuracoes</span><button onclick="fechaModal('modal-config')">&#10005;</button></div>
-  <div class="config-item" onclick="abreModal('modal-conta');fechaModal('modal-config')">
+  <div class="modal-hdr"><span>Configuracoes</span><button onclick="fcM('modal-config')">&#10005;</button></div>
+  <div class="config-item" onclick="abM('modal-conta');fcM('modal-config')">
    <span>&#43; Nova Conta</span><span>&#8250;</span>
   </div>
-  <div class="config-item" onclick="abreModal('modal-cartao');fechaModal('modal-config')">
+  <div class="config-item" onclick="abM('modal-cartao');fcM('modal-config')">
    <span>&#43; Novo Cartao</span><span>&#8250;</span>
   </div>
   <div class="config-item" onclick="exportaDados()">
@@ -169,6 +169,9 @@
   </div>
   <div class="config-item" onclick="document.getElementById('import-file').click()">
    <span>&#8593; Importar Backup</span><span>&#8250;</span>
+  </div>
+  <div class="config-item" onclick="abGC()">
+   <span>&#9776; Gerenciar Categorias</span><span>&#8250;</span>
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importaDados(this)">
   <div class="config-item" style="color:#ff6b6b" onclick="limpaDados()">
@@ -179,12 +182,12 @@
 </div>
 
 
-<div class="overlay" id="modal-cats" onclick="fechaModalFora(event,'modal-cats')">
+<div class="overlay" id="modal-cats" onclick="fcMF(event,'modal-cats')">
  <div class="modal">
-  <div class="modal-hdr"><span>Gerenciar Categorias</span><button onclick="fechaModal('modal-cats')">&#10005;</button></div>
+  <div class="modal-hdr"><span>Gerenciar Categorias</span><button onclick="fcM('modal-cats')">&#10005;</button></div>
   <div class="tipo-toggle" style="margin-bottom:12px">
-   <button id="btn-cats-gasto" class="tipo-btn ativo-d" onclick="setCatTipoGerenciar('gasto')">Gastos</button>
-   <button id="btn-cats-rec" class="tipo-btn" onclick="setCatTipoGerenciar('receita')">Receitas</button>
+   <button id="btn-cats-gasto" class="tipo-btn ativo-d" onclick="setCT('gasto')">Gastos</button>
+   <button id="btn-cats-rec" class="tipo-btn" onclick="setCT('receita')">Receitas</button>
   </div>
   <div id="lista-cats"></div>
   <div style="display:flex;gap:8px;margin-top:12px">
