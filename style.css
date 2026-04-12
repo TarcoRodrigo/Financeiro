@@ -214,3 +214,11 @@ select { appearance:none; }
 .mt8 { margin-top:8px; }
 .mt12 { margin-top:12px; }
 .mt16 { margin-top:16px; }
+
+/* BARRA RECEITAS vs GASTOS */
+.hero-bar-wrap { margin: 14px 0 4px; }
+.hero-bar-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--text2); margin-bottom:6px; font-weight:600; }
+.hero-bar { height:8px; background:#1a1a1a; border-radius:4px; overflow:hidden; position:relative; }
+.hero-bar::after { content:''; position:absolute; top:0; left:0; right:0; bottom:0; background:#ff6b6b; border-radius:4px; }
+.hero-bar-rec { height:100%; background:var(--accent); border-radius:4px 0 0 4px; position:relative; z-index:1; transition:width .6s ease; min-width:4px; }
+.hero-bar-vals { display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-top:7px; font-family:var(--font-h); }
