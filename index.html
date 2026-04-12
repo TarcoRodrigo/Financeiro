@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0f0f0f">
+<meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,250 +12,219 @@
 <title>FinanceX</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-
-<style>
-.dr-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1a1a1a;cursor:pointer;transition:background .15s;}
-.dr-item:last-child{border-bottom:none;}
-.dr-item:active{opacity:.7;}
-.dr-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-.dr-info{flex:1;}
-.dr-name{font-size:14px;font-weight:600;color:#f0f0f0;}
-.dr-sub{font-size:11px;color:#555;margin-top:2px;}
-.dr-arr{font-size:20px;color:#333;}
-#drawer::-webkit-scrollbar{display:none;}
-</style>
 </head>
 <body>
 <div id="app">
-  <header class="topbar">
+  <div class="topbar">
     <div class="logo">FinanceX</div>
     <div class="month-nav">
       <button onclick="mudaMes(-1)">&#8249;</button>
-      <span id="mesLabel">Abr 2026</span>
+      <span id="mesLabel"></span>
       <button onclick="mudaMes(1)">&#8250;</button>
     </div>
     <button class="icon-btn" onclick="abreDrawer()">&#9776;</button>
-  </header>
-
-  <main id="conteudo"></main>
-
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-p="inicio" onclick="nav('inicio')">
+  </div>
+  <div id="conteudo"></div>
+  <nav class="bnav">
+    <div class="ni active" data-p="inicio" onclick="nav('inicio')">
       <svg viewBox="0 0 24 24"><path d="M3 12L12 3l9 9M5 10v9h5v-5h4v5h5v-9"/></svg>
       <span>Inicio</span>
-    </button>
-    <button class="nav-btn" data-p="lancamentos" onclick="nav('lancamentos')">
+    </div>
+    <div class="ni" data-p="lancamentos" onclick="nav('lancamentos')">
       <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
       <span>Lancamentos</span>
-    </button>
-    <button class="nav-btn" data-p="cartoes" onclick="nav('cartoes')">
+    </div>
+    <div class="ni" data-p="cartoes" onclick="nav('cartoes')">
       <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       <span>Cartoes</span>
-    </button>
-    <button class="nav-btn" data-p="metas" onclick="nav('metas')">
+    </div>
+    <div class="ni" data-p="metas" onclick="nav('metas')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
       <span>Metas</span>
-    </button>
-    <button class="nav-btn" data-p="relatorios" onclick="nav('relatorios')">
+    </div>
+    <div class="ni" data-p="relatorios" onclick="nav('relatorios')">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <span>Relatorios</span>
-    </button>
+    </div>
   </nav>
 </div>
 
-<!-- MODAIS -->
-<div class="overlay" id="modal-tx" onclick="fcMF(event,'modal-tx')">
- <div class="modal">
-  <div class="modal-hdr"><span id="modal-tx-titulo">Novo Lancamento</span><button onclick="fcM('modal-tx')">&#10005;</button></div>
-  <div class="tipo-toggle" id="tipo-toggle">
-   <button id="btn-despesa" class="tipo-btn ativo-d" onclick="setTipo('despesa')">Despesa</button>
-   <button id="btn-receita" class="tipo-btn" onclick="setTipo('receita')">Receita</button>
+<!-- SHEET: LANCAMENTO -->
+<div class="overlay" id="sh-tx" onclick="fcMF(event,'sh-tx')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span id="sh-tx-title">Novo Lancamento</span><button onclick="fcM('sh-tx')">&#10005;</button></div>
+  <div class="ttoggle" id="tipo-toggle">
+   <button id="btn-desp" class="tbtn ativo-d" onclick="setTipo('despesa')">Despesa</button>
+   <button id="btn-rec" class="tbtn" onclick="setTipo('receita')">Receita</button>
   </div>
-  <label>Descricao</label>
-  <input id="tx-desc" type="text" placeholder="Ex: Supermercado">
-  <label>Valor (R$)</label>
-  <input id="tx-valor" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <label>Data</label>
-  <input id="tx-data" type="date">
-  <label>Tipo</label>
-  <select id="tx-fixo">
-   <option value="variavel">Variavel</option>
-   <option value="fixo">Fixo (repete todo mes)</option>
-  </select>
-  <label>Categoria</label>
-  <select id="tx-cat"></select>
-  <label id="label-conta">Conta</label>
-  <select id="tx-conta"></select>
-  <div id="grupo-parcela" style="display:none">
-   <label>Parcelamento</label>
-   <div style="display:flex;gap:8px">
-    <input id="tx-parc-total" type="number" min="1" max="60" placeholder="Total parcelas" style="flex:1">
-    <input id="tx-parc-atual" type="number" min="1" placeholder="Parcela atual" style="flex:1">
+  <div class="fg"><label class="flabel">Descricao</label><input class="finput" id="tx-desc" type="text" placeholder="Ex: Supermercado"></div>
+  <div class="fg"><label class="flabel">Valor (R$)</label><input class="finput" id="tx-valor" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <div class="frow">
+   <div class="fg"><label class="flabel">Data</label><input class="finput" id="tx-data" type="date"></div>
+   <div class="fg"><label class="flabel">Tipo</label><select class="finput" id="tx-fixo"><option value="variavel">Variavel</option><option value="fixo">Fixo mensal</option></select></div>
+  </div>
+  <div class="fg"><label class="flabel">Conta / Cartao</label><select class="finput" id="tx-conta"></select></div>
+  <div class="fg" id="gr-parc" style="display:none">
+   <label class="flabel">Parcelamento</label>
+   <div class="frow">
+    <input class="finput" id="tx-pt" type="number" min="1" max="60" placeholder="Total parcelas" oninput="prevParc()">
+    <input class="finput" id="tx-pa" type="number" min="1" placeholder="Parcela atual" oninput="prevParc()">
    </div>
+   <div id="prev-parc" style="font-size:11px;color:var(--text2);margin-top:5px;"></div>
   </div>
-  <label>Observacao</label>
-  <input id="tx-obs" type="text" placeholder="Opcional">
-  <button class="btn-salvar" onclick="salvaTx()">Salvar</button>
+  <div class="fg"><label class="flabel">Categoria</label><div class="cat-sel-grid" id="cat-grid"></div></div>
+  <div class="fg"><label class="flabel">Orcamento mensal (R$) - opcional</label><input class="finput" id="tx-orc" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <div class="fg">
+   <label class="flabel">Foto do Comprovante</label>
+   <div class="foto-area" onclick="document.getElementById('foto-input').click()" id="foto-area">
+    <div style="font-size:24px;margin-bottom:6px;">&#128247;</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text2);">Toque para adicionar foto</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px;">Comprovante ou nota fiscal</div>
+   </div>
+   <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="prevFoto(this)">
+  </div>
+  <div class="fg"><label class="flabel">Observacao</label><input class="finput" id="tx-obs" type="text" placeholder="Opcional"></div>
+  <button class="sbtn" onclick="salvaTx()">Salvar</button>
+  <button class="sbtn-sec" id="btn-del-tx" style="display:none;color:var(--red);" onclick="deletaTx()">Excluir Lancamento</button>
  </div>
 </div>
 
-<div class="overlay" id="modal-conta" onclick="fcMF(event,'modal-conta')">
- <div class="modal">
-  <div class="modal-hdr"><span>Nova Conta</span><button onclick="fcM('modal-conta')">&#10005;</button></div>
-  <label>Banco</label>
-  <div class="banco-grid" id="banco-grid"></div>
-  <label>Nome personalizado (opcional)</label>
-  <input id="conta-nome" type="text" placeholder="Ex: Conta Principal">
-  <label>Tipo</label>
-  <select id="conta-tipo">
-   <option value="corrente">Conta Corrente</option>
-   <option value="poupanca">Poupanca</option>
-   <option value="investimento">Investimento</option>
-   <option value="dinheiro">Dinheiro Fisico</option>
-   <option value="digital">Carteira Digital</option>
-  </select>
-  <label>Saldo inicial (R$)</label>
-  <input id="conta-saldo" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <button class="btn-salvar" onclick="salvaConta()">Adicionar Conta</button>
+<!-- SHEET: CONTA -->
+<div class="overlay" id="sh-conta" onclick="fcMF(event,'sh-conta')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Nova Conta</span><button onclick="fcM('sh-conta')">&#10005;</button></div>
+  <div class="fg"><label class="flabel">Banco</label><div class="banco-grid" id="banco-grid"></div></div>
+  <div class="fg"><label class="flabel">Nome personalizado</label><input class="finput" id="cnt-nome" type="text" placeholder="Opcional"></div>
+  <div class="fg"><label class="flabel">Tipo</label><select class="finput" id="cnt-tipo"><option value="corrente">Conta Corrente</option><option value="poupanca">Poupanca</option><option value="investimento">Investimento</option><option value="dinheiro">Dinheiro Fisico</option><option value="digital">Carteira Digital</option></select></div>
+  <div class="fg"><label class="flabel">Saldo Inicial (R$)</label><input class="finput" id="cnt-saldo" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <button class="sbtn" onclick="salvaConta()">Adicionar Conta</button>
  </div>
 </div>
 
-<div class="overlay" id="modal-cartao" onclick="fcMF(event,'modal-cartao')">
- <div class="modal">
-  <div class="modal-hdr"><span>Novo Cartao</span><button onclick="fcM('modal-cartao')">&#10005;</button></div>
-  <label>Banco / Bandeira</label>
-  <div class="banco-grid" id="cartao-banco-grid"></div>
-  <label>Nome personalizado (opcional)</label>
-  <input id="cartao-nome" type="text" placeholder="Ex: Cartao Principal">
-  <label>Bandeira</label>
-  <select id="cartao-bandeira">
-   <option>Visa</option><option>Mastercard</option><option>Elo</option><option>American Express</option><option>Hipercard</option>
-  </select>
-  <label>Limite total (R$)</label>
-  <input id="cartao-limite" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <label>4 ultimos digitos</label>
-  <input id="cartao-digitos" type="number" maxlength="4" placeholder="0000">
-  <div style="display:flex;gap:8px">
-   <div style="flex:1"><label>Dia fechamento</label><input id="cartao-fecha" type="number" min="1" max="31" placeholder="1-31"></div>
-   <div style="flex:1"><label>Dia vencimento</label><input id="cartao-vence" type="number" min="1" max="31" placeholder="1-31"></div>
+<!-- SHEET: CARTAO -->
+<div class="overlay" id="sh-cartao" onclick="fcMF(event,'sh-cartao')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Novo Cartao</span><button onclick="fcM('sh-cartao')">&#10005;</button></div>
+  <div class="fg"><label class="flabel">Banco</label><div class="banco-grid" id="cartao-banco-grid"></div></div>
+  <div class="fg"><label class="flabel">Nome personalizado</label><input class="finput" id="cc-nome" type="text" placeholder="Opcional"></div>
+  <div class="fg"><label class="flabel">Bandeira</label><select class="finput" id="cc-band"><option>Visa</option><option>Mastercard</option><option>Elo</option><option>American Express</option><option>Hipercard</option></select></div>
+  <div class="frow">
+   <div class="fg"><label class="flabel">Limite (R$)</label><input class="finput" id="cc-lim" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+   <div class="fg"><label class="flabel">4 ultimos digitos</label><input class="finput" id="cc-dig" type="number" maxlength="4" placeholder="0000"></div>
   </div>
-  <button class="btn-salvar" onclick="salvaCartao()">Adicionar Cartao</button>
+  <div class="frow">
+   <div class="fg"><label class="flabel">Dia fechamento</label><input class="finput" id="cc-fecha" type="number" min="1" max="31" placeholder="1-31"></div>
+   <div class="fg"><label class="flabel">Dia vencimento</label><input class="finput" id="cc-vence" type="number" min="1" max="31" placeholder="1-31"></div>
+  </div>
+  <button class="sbtn" onclick="salvaCartao()">Adicionar Cartao</button>
  </div>
 </div>
 
-<div class="overlay" id="modal-meta" onclick="fcMF(event,'modal-meta')">
- <div class="modal">
-  <div class="modal-hdr"><span>Nova Meta</span><button onclick="fcM('modal-meta')">&#10005;</button></div>
-  <label>Nome da meta</label>
-  <input id="meta-nome" type="text" placeholder="Ex: Viagem, Reserva...">
-  <label>Valor objetivo (R$)</label>
-  <input id="meta-alvo" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <label>Valor atual (R$)</label>
-  <input id="meta-atual" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <label>Data alvo</label>
-  <input id="meta-data" type="date">
-  <button class="btn-salvar" onclick="salvaMeta()">Criar Meta</button>
+<!-- SHEET: META -->
+<div class="overlay" id="sh-meta" onclick="fcMF(event,'sh-meta')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Nova Meta</span><button onclick="fcM('sh-meta')">&#10005;</button></div>
+  <div class="fg"><label class="flabel">Nome</label><input class="finput" id="mt-nome" type="text" placeholder="Ex: Viagem, Reserva..."></div>
+  <div class="fg"><label class="flabel">Objetivo (R$)</label><input class="finput" id="mt-alvo" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <div class="fg"><label class="flabel">Valor Atual (R$)</label><input class="finput" id="mt-atual" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <div class="fg"><label class="flabel">Data Alvo</label><input class="finput" id="mt-data" type="date"></div>
+  <button class="sbtn" onclick="salvaMeta()">Criar Meta</button>
  </div>
 </div>
 
-<div class="overlay" id="modal-aporte" onclick="fcMF(event,'modal-aporte')">
- <div class="modal">
-  <div class="modal-hdr"><span id="aporte-titulo">Aportar</span><button onclick="fcM('modal-aporte')">&#10005;</button></div>
-  <label>Valor (R$)</label>
-  <input id="aporte-valor" type="tel" placeholder="0,00" oninput="mascaraDinheiro(this)" autocomplete="off">
-  <button class="btn-salvar" onclick="salvaAporte()">Adicionar</button>
+<!-- SHEET: APORTE -->
+<div class="overlay" id="sh-aporte" onclick="fcMF(event,'sh-aporte')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span id="aporte-title">Aportar</span><button onclick="fcM('sh-aporte')">&#10005;</button></div>
+  <div class="fg"><label class="flabel">Valor (R$)</label><input class="finput" id="aporte-val" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <button class="sbtn" onclick="salvaAporte()">Adicionar</button>
  </div>
 </div>
 
+<!-- SHEET: ORCAMENTO -->
+<div class="overlay" id="sh-orc" onclick="fcMF(event,'sh-orc')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Orcamento por Categoria</span><button onclick="fcM('sh-orc')">&#10005;</button></div>
+  <div class="fg"><label class="flabel">Categoria</label><div class="cat-sel-grid" id="orc-cat-grid"></div></div>
+  <div class="fg"><label class="flabel">Limite mensal (R$)</label><input class="finput" id="orc-val" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <button class="sbtn" onclick="salvaOrc()">Salvar Orcamento</button>
+ </div>
+</div>
 
-
-
-<div class="overlay" id="modal-cats" onclick="fcMF(event,'modal-cats')">
- <div class="modal">
-  <div class="modal-hdr"><span>Gerenciar Categorias</span><button onclick="fcM('modal-cats')">&#10005;</button></div>
-  <div class="tipo-toggle" style="margin-bottom:12px">
-   <button id="btn-cats-gasto" class="tipo-btn ativo-d" onclick="setCT('gasto')">Gastos</button>
-   <button id="btn-cats-rec" class="tipo-btn" onclick="setCT('receita')">Receitas</button>
+<!-- SHEET: CATS -->
+<div class="overlay" id="sh-cats" onclick="fcMF(event,'sh-cats')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Categorias</span><button onclick="fcM('sh-cats')">&#10005;</button></div>
+  <div class="ttoggle">
+   <button id="btn-cats-g" class="tbtn ativo-d" onclick="setCatTipo('gasto')">Gastos</button>
+   <button id="btn-cats-r" class="tbtn" onclick="setCatTipo('receita')">Receitas</button>
   </div>
-  <div id="lista-cats"></div>
-  <div style="display:flex;gap:8px;margin-top:12px">
-   <input id="nova-cat-nome" type="text" placeholder="Nome da nova categoria" class="finput" style="flex:1">
-   <button onclick="salvaNovaCat()" style="background:var(--accent);color:#000;border-radius:var(--rsm);padding:0 16px;font-weight:700;font-size:20px">+</button>
+  <div id="lista-cats" style="margin-bottom:14px;"></div>
+  <div style="display:flex;gap:8px;">
+   <input class="finput" id="nova-cat" type="text" placeholder="Nome da nova categoria" style="flex:1;">
+   <button onclick="salvaNovaCat()" style="background:var(--accent);color:#000;border-radius:var(--rsm);padding:0 16px;font-weight:700;font-size:20px;flex-shrink:0;">+</button>
   </div>
  </div>
 </div>
 
+<!-- SHEET: CONFIRMAR PAGAMENTO -->
+<div class="overlay" id="sh-pag" onclick="fcMF(event,'sh-pag')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Confirmar Pagamento</span><button onclick="fcM('sh-pag')">&#10005;</button></div>
+  <div id="pag-info" style="background:var(--bg3);border-radius:var(--rsm);padding:14px;margin-bottom:14px;"></div>
+  <div class="fg"><label class="flabel">Data do Pagamento</label><input class="finput" id="pag-data" type="date"></div>
+  <button class="sbtn" onclick="confirmaPag()">Confirmar Pagamento</button>
+  <button class="sbtn-sec" onclick="fcM('sh-pag')">Cancelar</button>
+ </div>
+</div>
 
-<!-- DRAWER LATERAL -->
-<div id="drawer-overlay" onclick="fechaDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:none;backdrop-filter:blur(3px);"></div>
-<div id="drawer" style="position:fixed;top:0;right:-320px;width:300px;height:100%;background:#111;z-index:700;transition:right .3s ease;overflow-y:auto;box-shadow:-4px 0 30px rgba(0,0,0,.5);display:flex;flex-direction:column;">
-  <div style="padding:calc(20px + env(safe-area-inset-top,0px)) 20px 20px;border-bottom:1px solid #222;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div style="font-family:var(--font-h);font-size:22px;font-weight:800;background:linear-gradient(120deg,#00e5a0,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">FinanceX</div>
-      <button onclick="fechaDrawer()" style="width:32px;height:32px;border-radius:50%;background:#1e1e1e;border:1px solid #333;color:#888;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#10005;</button>
-    </div>
-    <div style="font-size:12px;color:#555;">v1.0 - Dados salvos localmente</div>
+<!-- DRAWER -->
+<div id="drawer-overlay" onclick="fechaDrawer()"></div>
+<div id="drawer">
+ <div style="padding:calc(20px + env(safe-area-inset-top,0px)) 20px 18px;border-bottom:1px solid #1a1a1a;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+   <div style="font-family:var(--font-h);font-size:21px;font-weight:800;background:linear-gradient(120deg,#00e5a0,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">FinanceX</div>
+   <button onclick="fechaDrawer()" style="width:30px;height:30px;border-radius:50%;background:#1e1e1e;border:1px solid #333;color:#888;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#10005;</button>
   </div>
-
-  <!-- Secao Gerenciar -->
-  <div style="padding:16px 20px 8px;">
-    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Gerenciar</div>
-    <div class="dr-item" onclick="fechaDrawer();abM('modal-conta')">
-      <div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#x1F3E6;</div>
-      <div class="dr-info"><div class="dr-name">Nova Conta</div><div class="dr-sub">Adicionar conta bancaria</div></div>
-      <div class="dr-arr">&#8250;</div>
-    </div>
-    <div class="dr-item" onclick="fechaDrawer();abM('modal-cartao')">
-      <div class="dr-icon" style="background:rgba(167,139,250,.15);color:#a78bfa;">&#x1F4B3;</div>
-      <div class="dr-info"><div class="dr-name">Novo Cartao</div><div class="dr-sub">Adicionar cartao de credito</div></div>
-      <div class="dr-arr">&#8250;</div>
-    </div>
-    <div class="dr-item" onclick="fechaDrawer();abGC()">
-      <div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#9776;</div>
-      <div class="dr-info"><div class="dr-name">Categorias</div><div class="dr-sub">Criar e excluir categorias</div></div>
-      <div class="dr-arr">&#8250;</div>
-    </div>
+  <div style="font-size:11px;color:#444;">v2.0 - Dados salvos localmente</div>
+ </div>
+ <div style="padding:14px 20px 8px;">
+  <div style="font-size:10px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Gerenciar</div>
+  <div class="dr-item" onclick="fechaDrawer();abM('sh-conta')"><div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#x1F3E6;</div><div class="dr-info"><div class="dr-name">Nova Conta</div><div class="dr-sub">Adicionar conta bancaria</div></div><div class="dr-arr">&#8250;</div></div>
+  <div class="dr-item" onclick="fechaDrawer();abM('sh-cartao')"><div class="dr-icon" style="background:rgba(167,139,250,.15);color:#a78bfa;">&#x1F4B3;</div><div class="dr-info"><div class="dr-name">Novo Cartao</div><div class="dr-sub">Adicionar cartao de credito</div></div><div class="dr-arr">&#8250;</div></div>
+  <div class="dr-item" onclick="fechaDrawer();abCats()"><div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#9776;</div><div class="dr-info"><div class="dr-name">Categorias</div><div class="dr-sub">Criar e excluir categorias</div></div><div class="dr-arr">&#8250;</div></div>
+  <div class="dr-item" onclick="fechaDrawer();abM('sh-orc')"><div class="dr-icon" style="background:rgba(0,229,160,.15);color:#00e5a0;">&#9776;</div><div class="dr-info"><div class="dr-name">Orcamentos</div><div class="dr-sub">Limites por categoria</div></div><div class="dr-arr">&#8250;</div></div>
+ </div>
+ <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
+  <div style="font-size:10px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;margin-top:6px;">Dados</div>
+  <div class="dr-item" onclick="exportaDados()"><div class="dr-icon" style="background:rgba(0,229,160,.15);color:#00e5a0;">&#8595;</div><div class="dr-info"><div class="dr-name">Exportar Backup</div><div class="dr-sub">Baixar arquivo JSON</div></div><div class="dr-arr">&#8250;</div></div>
+  <div class="dr-item" onclick="document.getElementById('import-file').click()"><div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#8593;</div><div class="dr-info"><div class="dr-name">Importar Backup</div><div class="dr-sub">Restaurar arquivo JSON</div></div><div class="dr-arr">&#8250;</div></div>
+  <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importaDados(this)">
+ </div>
+ <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
+  <div style="font-size:10px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;margin-top:6px;">Privacidade</div>
+  <div class="dr-item" style="cursor:default;">
+   <div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#x1F441;</div>
+   <div class="dr-info"><div class="dr-name">Modo Privado</div><div class="dr-sub">Ocultar valores</div></div>
+   <label class="tswitch"><input type="checkbox" id="priv-toggle" onchange="setPriv(this.checked)"><span class="tslider"></span></label>
   </div>
-
-  <!-- Secao Dados -->
-  <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
-    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Dados</div>
-    <div class="dr-item" onclick="exportaDados()">
-      <div class="dr-icon" style="background:rgba(0,229,160,.15);color:#00e5a0;">&#8595;</div>
-      <div class="dr-info"><div class="dr-name">Exportar Backup</div><div class="dr-sub">Baixar arquivo JSON</div></div>
-      <div class="dr-arr">&#8250;</div>
-    </div>
-    <div class="dr-item" onclick="document.getElementById('import-file').click()">
-      <div class="dr-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;">&#8593;</div>
-      <div class="dr-info"><div class="dr-name">Importar Backup</div><div class="dr-sub">Restaurar arquivo JSON</div></div>
-      <div class="dr-arr">&#8250;</div>
-    </div>
-    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importaDados(this)">
+ </div>
+ <div style="padding:8px 20px 30px;border-top:1px solid #1a1a1a;margin-top:auto;">
+  <div style="font-size:10px;font-weight:700;color:#2a1010;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;margin-top:6px;">Zona de Perigo</div>
+  <div class="dr-item" onclick="limpaDados()">
+   <div class="dr-icon" style="background:rgba(255,107,107,.15);color:#ff6b6b;">&#128465;</div>
+   <div class="dr-info"><div class="dr-name" style="color:#ff6b6b;">Limpar Dados</div><div class="dr-sub">Acao irreversivel</div></div>
+   <div class="dr-arr" style="color:#ff6b6b;">&#8250;</div>
   </div>
-
-  <!-- Secao Privacidade -->
-  <div style="padding:8px 20px;border-top:1px solid #1a1a1a;">
-    <div style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Privacidade</div>
-    <div class="dr-item" style="cursor:default;">
-      <div class="dr-icon" style="background:rgba(251,191,36,.15);color:#fbbf24;">&#x1F441;</div>
-      <div class="dr-info"><div class="dr-name">Modo Privado</div><div class="dr-sub">Ocultar valores na tela</div></div>
-      <label style="position:relative;width:44px;height:24px;flex-shrink:0;">
-        <input type="checkbox" id="privToggle" onchange="setPrivacy(this.checked)" style="opacity:0;width:0;height:0;">
-        <span id="toggleSlider" style="position:absolute;inset:0;background:#2a2a2a;border-radius:12px;cursor:pointer;transition:.2s;"></span>
-        <span id="toggleThumb" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#555;border-radius:50%;transition:.2s;"></span>
-      </label>
-    </div>
-  </div>
-
-  <!-- Secao Perigo -->
-  <div style="padding:8px 20px 30px;border-top:1px solid #1a1a1a;margin-top:auto;">
-    <div style="font-size:10px;font-weight:700;color:#3a1a1a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:8px;">Zona de Perigo</div>
-    <div class="dr-item" onclick="limpaDados()" style="border-color:#2a1a1a;">
-      <div class="dr-icon" style="background:rgba(255,107,107,.15);color:#ff6b6b;">&#128465;</div>
-      <div class="dr-info"><div class="dr-name" style="color:#ff6b6b;">Limpar Todos os Dados</div><div class="dr-sub">Acao irreversivel</div></div>
-      <div class="dr-arr" style="color:#ff6b6b;">&#8250;</div>
-    </div>
-  </div>
+ </div>
 </div>
 
 <div id="toast"></div>
