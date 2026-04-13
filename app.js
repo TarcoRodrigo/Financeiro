@@ -190,14 +190,14 @@ function rInicio(){
   // Receitas do mes
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
 
-  // Despesas PAGAS: variaveis lancadas + fixos confirmados
+  // Despesas PAGAS: variaveis lancadas + fixos confirmados + gastos cartao do mes
   var depPago=ts.filter(function(t){
     if(t.tipo!=='despesa')return false;
     if(t.fixo==='fixo'&&!t.cartaoId){
       // fixo so conta se confirmado neste mes
       return t.pagamentos&&t.pagamentos[chave];
     }
-    return true; // variavel ou cartao: conta sempre
+    return true; // variavel ou cartao: conta no mes em que foi lancado
   }).reduce(function(a,t){return a+t.valor;},0);
 
   // Despesas PENDENTES: fixos nao confirmados
@@ -277,7 +277,46 @@ function rInicio(){
   if(d.cartoes.length>0){
     h+='<div class="sec-hdr mt8"><span class="sec-titulo">Cartoes</span><span class="sec-link" onclick="nav(\'cartoes\')">Ver todos</span></div>';
     h+='<div class="hscroll">';
-    d.cartoes.forEach(function(c,i){var b=banco(c.banco),us=usadoCC(c,d.transacoes),pct=c.limite>0?Math.min(100,(us/c.limite)*100):0;h+='<div class="cc-card" style="background:linear-gradient(145deg,'+b.cor+'cc,'+b.cor+'88)" onclick="ccIdx='+i+';nav(\'cartoes\')"><div class="cc-due">Venc. '+(c.diaVence||'?')+'</div><div class="cc-chip"></div><div class="cc-num">**** '+(c.digitos||'0000')+'</div><div class="cc-nome">'+(c.nome||b.nome)+'</div><div class="cc-barra-labels"><span>'+fRs(us)+'</span><span>'+fRs(c.limite)+'</span></div><div class="cc-barra"><div class="cc-barra-fill" style="width:'+pct+'%"></div></div></div>';});
+    d.cartoes.forEach(function(c,i){
+      var b=banco(c.banco),us=usadoCC(c,d.transacoes),disp=c.limite-us;
+      var pct=c.limite>0?Math.min(100,(us/c.limite)*100):0;
+      var bc=pct>85?'#ff6b6b':pct>60?'#fbbf24':'#00e5a0';
+      // Parcelas futuras comprometidas
+      var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
+      var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
+      // Alerta vencimento
+      var hoje=new Date(),dv=parseInt(c.diaVence)||10;
+      var venc=new Date(hoje.getFullYear(),hoje.getMonth(),dv);
+      if(venc<hoje)venc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dv);
+      var diff=Math.ceil((venc-hoje)/(1000*60*60*24));
+      var alertaBorda=diff<=5?'outline:2px solid #ff6b6b;':'';
+      var vencStr=diff===0?'Vence hoje!':diff===1?'Vence amanha!':diff<=5?'Vence em '+diff+' dias':'Vence dia '+c.diaVence;
+      var vencCor=diff<=5?'#ff6b6b':'rgba(255,255,255,.6)';
+      h+='<div class="cc-card" style="background:linear-gradient(145deg,'+b.cor+'cc,'+b.cor+'88);'+alertaBorda+'" onclick="ccIdx='+i+';nav(\'cartoes\')">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
+      h+='<div style="font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.5px;">'+(c.nome||b.nome)+'</div>';
+      h+='<div style="font-size:9px;color:'+vencCor+';font-weight:600;">'+vencStr+'</div>';
+      h+='</div>';
+      // 3 informacoes principais
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:10px;">';
+      h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;">';
+      h+='<div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Fatura</div>';
+      h+='<div style="font-size:11px;font-weight:700;color:#ff6b6b;">'+fRs(us)+'</div></div>';
+      h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;">';
+      h+='<div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Parcelas</div>';
+      h+='<div style="font-size:11px;font-weight:700;color:#fbbf24;">'+fRs(totParc)+'</div></div>';
+      h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;">';
+      h+='<div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Disponivel</div>';
+      h+='<div style="font-size:11px;font-weight:700;color:#00e5a0;">'+fRs(disp)+'</div></div>';
+      h+='</div>';
+      // Barra de limite
+      h+='<div style="height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;">';
+      h+='<div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:2px;"></div></div>';
+      h+='<div style="display:flex;justify-content:space-between;margin-top:4px;">';
+      h+='<span style="font-size:9px;color:rgba(255,255,255,.45);">'+pct.toFixed(0)+'% usado</span>';
+      h+='<span style="font-size:9px;color:rgba(255,255,255,.45);">Limite: '+fRs(c.limite)+'</span>';
+      h+='</div></div>';
+    });
     h+='</div>';
   }
 
@@ -697,7 +736,7 @@ function abreEditTx(id){
 
 function salvaTx(){
   var desc=document.getElementById('tx-desc').value.trim(),valor=pv('tx-valor'),data=document.getElementById('tx-data').value;
-  var fixo=document.getElementById('tx-fixo').value,cat=catSel,cv=document.getElementById('tx-conta').value,obs=document.getElementById('tx-obs').value.trim();
+  var fixoRaw=document.getElementById('tx-fixo').value,cat=catSel,cv=document.getElementById('tx-conta').value,obs=document.getElementById('tx-obs').value.trim();var fixo=cv.startsWith('cartao:')?'variavel':fixoRaw;
   var pt=parseInt(document.getElementById('tx-pt').value)||0,pa=parseInt(document.getElementById('tx-pa').value)||0;
   if(!desc){toast('Informe a descricao','err');return;}
   if(!valor||valor<=0){toast('Informe o valor','err');return;}
