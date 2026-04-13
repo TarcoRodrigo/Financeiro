@@ -397,88 +397,208 @@ function delMeta(i){if(!confirm('Excluir meta?'))return;var d=gd();d.metas.splic
 
 //  RENDER RELATORIOS 
 function rRel(){
-  var d=gd(),ts=txMes(d.transacoes),rec=0,dep=0;
-  ts.forEach(function(t){if(t.tipo==='receita')rec+=t.valor;else dep+=t.valor;});
+  var d=gd(),ts=txMes(d.transacoes),chave=mes+'-'+ano;
 
-  var h='<div class="sgrid">';
+  // Separar receitas
+  var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
+
+  // Despesas variaveis (nao fixo)
+  var depVar=ts.filter(function(t){return t.tipo==='despesa'&&t.fixo!=='fixo';}).reduce(function(a,t){return a+t.valor;},0);
+
+  // Fixos do mes: ja lancados + recorrentes pendentes
+  var fixosLanc=ts.filter(function(t){return t.tipo==='despesa'&&t.fixo==='fixo'&&!t.cartaoId;});
+  var fixosPendentes=fixosPend(d.transacoes);
+  var depFixoPago=fixosLanc.filter(function(t){return t.pagamentos&&t.pagamentos[chave];}).reduce(function(a,t){return a+t.valor;},0);
+  var depFixoPend=fixosPendentes.reduce(function(a,t){return a+t.valor;},0);
+  var depFixoTotal=depFixoPago+depFixoPend;
+  var depTotal=depVar+depFixoTotal;
+  var saldoReal=rec-depVar-depFixoPago;
+  var saldoProj=rec-depTotal;
+
+  var h='';
+
+  // -- SECAO 1: VISAO GERAL --
+  h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Visao Geral</div>';
+  h+='<div class="sgrid">';
   h+='<div class="sbox"><div class="slabel">Receitas</div><div class="sval g">'+fR(rec)+'</div></div>';
-  h+='<div class="sbox"><div class="slabel">Despesas</div><div class="sval r">'+fR(dep)+'</div></div>';
-  h+='<div class="sbox"><div class="slabel">Saldo</div><div class="sval '+(rec-dep>=0?'g':'r')+'">'+fR(rec-dep)+'</div></div>';
-  h+='<div class="sbox"><div class="slabel">Lancamentos</div><div class="sval">'+ts.length+'</div></div>';
+  h+='<div class="sbox"><div class="slabel">Despesas Totais</div><div class="sval r">'+fR(depTotal)+'</div></div>';
+  h+='<div class="sbox"><div class="slabel">Saldo Real</div><div class="sval '+(saldoReal>=0?'g':'r')+'">'+fR(saldoReal)+'</div><div class="ssub">Apos pagos</div></div>';
+  h+='<div class="sbox"><div class="slabel">Saldo Projetado</div><div class="sval '+(saldoProj>=0?'g':'r')+'">'+fR(saldoProj)+'</div><div class="ssub">Pagando tudo</div></div>';
   h+='</div>';
 
-  // Pizza categorias
-  var cm={};ts.filter(function(t){return t.tipo==='despesa';}).forEach(function(t){cm[t.cat]=(cm[t.cat]||0)+t.valor;});
+  // Barra Fixo vs Variavel
+  var fixoPct=depTotal>0?Math.round((depFixoTotal/depTotal)*100):0;
+  var varPct=100-fixoPct;
+  h+='<div class="card mt12">';
+  h+='<div class="card-titulo">Fixo vs Variavel</div>';
+  h+='<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:8px;">';
+  h+='<div style="width:'+fixoPct+'%;background:var(--yellow);transition:width .5s;"></div>';
+  h+='<div style="flex:1;background:var(--blue);"></div>';
+  h+='</div>';
+  h+='<div style="display:flex;justify-content:space-between;">';
+  h+='<div style="font-size:12px;"><span style="color:var(--yellow);">&#9679;</span> Fixos: '+fR(depFixoTotal)+' ('+fixoPct+'%)</div>';
+  h+='<div style="font-size:12px;"><span style="color:var(--blue);">&#9679;</span> Variaveis: '+fR(depVar)+' ('+varPct+'%)</div>';
+  h+='</div></div>';
+
+  // -- SECAO 2: GASTOS FIXOS --
+  h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Gastos Fixos do Mes</div>';
+  h+='<div class="card">';
+  if(fixosPendentes.length===0&&fixosLanc.length===0){
+    h+='<div class="tx-empty">Nenhum gasto fixo cadastrado</div>';
+  } else {
+    // Pagos
+    var pagos=fixosLanc.filter(function(t){return t.pagamentos&&t.pagamentos[chave];});
+    pagos.forEach(function(t){
+      var cat=getCat(t.cat);
+      h+='<div class="tx-item">';
+      h+='<div class="tx-icone" style="background:'+cat.cor+'22;color:'+cat.cor+'">'+cat.ic+'</div>';
+      h+='<div class="tx-info"><div class="tx-nome">'+t.desc+(t.parcTotal?' ('+t.parcAtual+'/'+t.parcTotal+')':'')+'</div>';
+      h+='<div class="tx-cat">'+cat.nome+' <span class="badge-pago">Pago '+fData(t.pagamentos[chave])+'</span></div></div>';
+      h+='<div class="tx-right"><div class="tx-valor r">-'+fR(t.valor)+'</div></div>';
+      h+='</div>';
+    });
+    // Pendentes
+    fixosPendentes.forEach(function(t){
+      h+='<div style="cursor:pointer;" onclick="abrePag(\'' + t.id + '\')">';
+      h+=txItem(t,false);
+      h+='</div>';
+    });
+    // Totais fixos
+    h+='<div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px;">';
+    h+='<span style="font-size:12px;color:var(--accent);">Pago: '+fR(depFixoPago)+'</span>';
+    h+='<span style="font-size:12px;color:var(--yellow);">Pendente: '+fR(depFixoPend)+'</span>';
+    h+='<span style="font-size:12px;font-weight:700;">Total: '+fR(depFixoTotal)+'</span>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // -- SECAO 3: GASTOS VARIAVEIS POR CATEGORIA --
+  h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Gastos Variaveis por Categoria</div>';
+  var cm={};
+  ts.filter(function(t){return t.tipo==='despesa';}).forEach(function(t){cm[t.cat]=(cm[t.cat]||0)+t.valor;});
   var td=Object.values(cm).reduce(function(a,v){return a+v;},0);
   if(td>0){
-    h+='<div class="card mt12"><div class="card-titulo">Gastos por Categoria</div>';
-    // SVG pizza
+    h+='<div class="card">';
+    // Pizza SVG
     var cats=Object.keys(cm).sort(function(a,b){return cm[b]-cm[a];});
-    var svgSize=160,cx=svgSize/2,cy=svgSize/2,r=60,startAngle=-Math.PI/2;
-    var svgPaths='';
+    var svgS=140,cx=svgS/2,cy=svgS/2,r=52,sa=-Math.PI/2,paths='';
     cats.forEach(function(cid){
-      var cat=getCat(cid),val=cm[cid],angle=(val/td)*Math.PI*2;
-      var x1=cx+r*Math.cos(startAngle),y1=cy+r*Math.sin(startAngle);
-      var x2=cx+r*Math.cos(startAngle+angle),y2=cy+r*Math.sin(startAngle+angle);
-      var large=angle>Math.PI?1:0;
-      svgPaths+='<path d="M '+cx+' '+cy+' L '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+large+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+cat.cor+'" stroke="#0a0a0a" stroke-width="2"/>';
-      startAngle+=angle;
+      var cat=getCat(cid),val=cm[cid],ang=(val/td)*Math.PI*2;
+      var x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa);
+      var x2=cx+r*Math.cos(sa+ang),y2=cy+r*Math.sin(sa+ang);
+      var lg=ang>Math.PI?1:0;
+      paths+='<path d="M '+cx+' '+cy+' L '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+lg+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+cat.cor+'" stroke="#0a0a0a" stroke-width="2"/>';
+      sa+=ang;
     });
-    h+='<div style="display:flex;align-items:center;gap:16px">';
-    h+='<svg width="'+svgSize+'" height="'+svgSize+'" viewBox="0 0 '+svgSize+' '+svgSize+'" style="flex-shrink:0">'+svgPaths+'<circle cx="'+cx+'" cy="'+cy+'" r="30" fill="#0a0a0a"/></svg>';
-    h+='<div style="flex:1">';
-    cats.slice(0,6).forEach(function(cid){var cat=getCat(cid),pct=td>0?(cm[cid]/td)*100:0;h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><div style="width:10px;height:10px;border-radius:50%;background:'+cat.cor+';flex-shrink:0"></div><div style="flex:1;font-size:11px">'+cat.nome+'</div><div style="font-size:11px;font-weight:700;color:var(--text2)">'+pct.toFixed(0)+'%</div></div>';});
+    h+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">';
+    h+='<svg width="'+svgS+'" height="'+svgS+'" viewBox="0 0 '+svgS+' '+svgS+'" style="flex-shrink:0;">'+paths+'<circle cx="'+cx+'" cy="'+cy+'" r="26" fill="#0a0a0a"/><text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="9" fill="#888">Total</text></svg>';
+    h+='<div style="flex:1;">';
+    cats.slice(0,7).forEach(function(cid){
+      var cat=getCat(cid),pct=td>0?(cm[cid]/td)*100:0;
+      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+      h+='<div style="width:9px;height:9px;border-radius:50%;background:'+cat.cor+';flex-shrink:0;"></div>';
+      h+='<div style="flex:1;font-size:11px;">'+cat.nome+'</div>';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--text2);">'+pct.toFixed(0)+'%</div>';
+      h+='</div>';
+    });
     h+='</div></div>';
     // Barras detalhadas
-    h+='<div style="margin-top:12px;">';
-    cats.forEach(function(cid){var cat=getCat(cid),pct=td>0?(cm[cid]/td)*100:0;h+='<div class="bud-item"><div class="bud-hdr"><div class="bud-cat"><span>'+cat.ic+'</span>'+cat.nome+'</div><div class="bud-vals">'+fR(cm[cid])+' ('+pct.toFixed(0)+'%)</div></div><div class="bud-bar"><div class="bud-fill" style="width:'+pct+'%;background:'+cat.cor+'"></div></div></div>';});
-    h+='</div></div>';
+    cats.forEach(function(cid){
+      var cat=getCat(cid),pct=td>0?(cm[cid]/td)*100:0;
+      var orc=d.orcamentos[cid];
+      var orcPct=orc?Math.min(100,(cm[cid]/orc)*100):0;
+      var orcColor=orcPct>90?'var(--red)':orcPct>70?'var(--yellow)':'var(--accent)';
+      h+='<div class="bud-item">';
+      h+='<div class="bud-hdr"><div class="bud-cat"><span>'+cat.ic+'</span>'+cat.nome+'</div>';
+      h+='<div class="bud-vals">'+fR(cm[cid])+(orc?' / '+fR(orc):'')+'</div></div>';
+      h+='<div class="bud-bar"><div class="bud-fill" style="width:'+(orc?orcPct:pct)+'%;background:'+(orc?orcColor:cat.cor)+'"></div></div>';
+      if(orc){h+='<div class="bud-pct">'+orcPct.toFixed(0)+'% do orcamento'+(orcPct>90?' &#9888;':'')+'</div>';}
+      h+='</div>';
+    });
+    h+='</div>';
+  } else {
+    h+='<div class="card"><div class="tx-empty">Nenhum gasto variavel neste mes</div></div>';
   }
 
-  // Orcamentos
-  var orcs=d.orcamentos,temOrc=Object.keys(orcs).length>0;
+  // -- SECAO 4: FLUXO 6 MESES --
+  h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Historico 6 Meses</div>';
+  h+='<div class="card">';
+  var mds=[],mx=1;
+  for(var i=5;i>=0;i--){
+    var mm=mes-i,aa=ano;if(mm<0){mm+=12;aa--;}
+    var mt=d.transacoes.filter(function(t){var dt=new Date(t.data+'T12:00:00');return dt.getMonth()===mm&&dt.getFullYear()===aa;});
+    var mr=mt.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
+    var mfx=mt.filter(function(t){return t.tipo==='despesa'&&t.fixo==='fixo'&&!t.cartaoId;}).reduce(function(a,t){return a+t.valor;},0);
+    var mvr=mt.filter(function(t){return t.tipo==='despesa'&&(t.fixo!=='fixo'||t.cartaoId);}).reduce(function(a,t){return a+t.valor;},0);
+    mds.push({l:MC[mm],r:mr,f:mfx,v:mvr});
+    if(Math.max(mr,mfx+mvr)>mx)mx=Math.max(mr,mfx+mvr);
+  }
+  var sw2=280,sh2=100,pw=sw2/(mds.length-1),pad=10;
+  var rPts=mds.map(function(m,i){return{x:i*pw,y:sh2-pad-(m.r/mx)*(sh2-2*pad)};});
+  var fPts=mds.map(function(m,i){return{x:i*pw,y:sh2-pad-((m.f+m.v)/mx)*(sh2-2*pad)};});
+  var vPts=mds.map(function(m,i){return{x:i*pw,y:sh2-pad-(m.v/mx)*(sh2-2*pad)};});
+  function mkPath(pts){return pts.map(function(p,i){return(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1);}).join(' ');}
+  h+='<svg viewBox="0 0 '+sw2+' '+sh2+'" style="width:100%;height:'+sh2+'px;overflow:visible;">';
+  h+='<path d="'+mkPath(fPts)+'" fill="none" stroke="var(--yellow)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2"/>';
+  h+='<path d="'+mkPath(vPts)+'" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 2"/>';
+  h+='<path d="'+mkPath(rPts)+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>';
+  rPts.forEach(function(p){h+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="var(--accent)"/>';});
+  fPts.forEach(function(p){h+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="2.5" fill="var(--yellow)"/>';});
+  h+='</svg>';
+  h+='<div style="display:flex;justify-content:space-between;margin-top:4px;">';
+  mds.forEach(function(m){h+='<div style="font-size:9px;color:var(--text2);text-align:center;flex:1;">'+m.l+'</div>';});
+  h+='</div>';
+  h+='<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">';
+  h+='<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><div style="width:14px;height:2px;background:var(--accent);border-radius:1px;"></div>Receitas</div>';
+  h+='<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><div style="width:14px;height:2px;background:var(--yellow);border-radius:1px;border-bottom:2px dashed var(--yellow);"></div>Fixos</div>';
+  h+='<div style="display:flex;align-items:center;gap:4px;font-size:11px;"><div style="width:14px;height:2px;background:var(--blue);border-radius:1px;border-bottom:2px dashed var(--blue);"></div>Variaveis</div>';
+  h+='</div></div>';
+
+  // -- SECAO 5: ORCAMENTOS --
+  var temOrc=Object.keys(d.orcamentos||{}).length>0;
   if(temOrc){
-    h+='<div class="card mt12"><div class="card-titulo">Orcamentos do Mes</div>';
-    Object.keys(orcs).forEach(function(cid){
-      var cat=getCat(cid),lim=orcs[cid],gasto=cm[cid]||0,pct=lim>0?Math.min(100,(gasto/lim)*100):0;
+    h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Orcamentos</div>';
+    h+='<div class="card">';
+    Object.keys(d.orcamentos).forEach(function(cid){
+      var cat=getCat(cid),lim=d.orcamentos[cid],gasto=cm[cid]||0,pct=lim>0?Math.min(100,(gasto/lim)*100):0;
       var bc=pct>90?'var(--red)':pct>70?'var(--yellow)':'var(--accent)';
-      h+='<div class="bud-item"><div class="bud-hdr"><div class="bud-cat"><span>'+cat.ic+'</span>'+cat.nome+'</div><div class="bud-vals">'+fR(gasto)+' / '+fR(lim)+'</div></div><div class="bud-bar"><div class="bud-fill" style="width:'+pct+'%;background:'+bc+'"></div></div><div class="bud-pct">'+pct.toFixed(0)+'% usado</div></div>';
-      if(pct>90&&gasto>0){h+='<div style="font-size:10px;color:var(--red);margin-top:-8px;margin-bottom:8px;">&#9888; Orcamento quase esgotado!</div>';}
+      h+='<div class="bud-item">';
+      h+='<div class="bud-hdr"><div class="bud-cat"><span>'+cat.ic+'</span>'+cat.nome+'</div><div class="bud-vals">'+fR(gasto)+' / '+fR(lim)+'</div></div>';
+      h+='<div class="bud-bar"><div class="bud-fill" style="width:'+pct+'%;background:'+bc+'"></div></div>';
+      h+='<div class="bud-pct" style="color:'+bc+'">'+pct.toFixed(0)+'% usado'+(pct>90?' &#9888; Orcamento quase esgotado!':'')+'</div>';
+      h+='</div>';
     });
     h+='</div>';
   }
 
-  // Grafico linha 6 meses
-  h+='<div class="card mt12"><div class="card-titulo">Historico 6 Meses</div>';
-  var mds=[],mx=1;
-  for(var i=5;i>=0;i--){var mm=mes-i,aa=ano;if(mm<0){mm+=12;aa--;}var mt=d.transacoes.filter(function(t){var dt=new Date(t.data+'T12:00:00');return dt.getMonth()===mm&&dt.getFullYear()===aa;});var mr=mt.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0),mdp=mt.filter(function(t){return t.tipo==='despesa';}).reduce(function(a,t){return a+t.valor;},0);mds.push({l:MC[mm],r:mr,d:mdp,s:mr-mdp});if(Math.max(mr,mdp)>mx)mx=Math.max(mr,mdp);}
-  // SVG linha
-  var sw=280,sh2=100,pw=sw/(mds.length-1),pad=10;
-  var rPts=mds.map(function(m,i){return{x:i*pw,y:sh2-pad-(m.r/mx)*(sh2-2*pad)};});
-  var dPts=mds.map(function(m,i){return{x:i*pw,y:sh2-pad-(m.d/mx)*(sh2-2*pad)};});
-  var rPath=rPts.map(function(p,i){return(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1);}).join(' ');
-  var dPath=dPts.map(function(p,i){return(i===0?'M':'L')+p.x.toFixed(1)+' '+p.y.toFixed(1);}).join(' ');
-  h+='<svg viewBox="0 0 '+sw+' '+sh2+'" style="width:100%;height:'+sh2+'px;overflow:visible">';
-  h+='<path d="'+rPath+'" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round"/>';
-  h+='<path d="'+dPath+'" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round"/>';
-  rPts.forEach(function(p){h+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="#00e5a0"/>';});
-  dPts.forEach(function(p){h+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="#ff6b6b"/>';});
-  h+='</svg>';
-  h+='<div style="display:flex;justify-content:space-between;margin-top:4px;">';
-  mds.forEach(function(m){h+='<div style="font-size:9px;color:var(--text2);text-align:center;flex:1">'+m.l+'</div>';});
-  h+='</div>';
-  h+='<div style="display:flex;gap:14px;margin-top:8px"><div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:12px;height:2px;background:#00e5a0"></div>Receitas</div><div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:12px;height:2px;background:#ff6b6b"></div>Despesas</div></div>';
-  h+='</div>';
-
-  // Cartoes
+  // -- SECAO 6: CARTOES --
   if(d.cartoes.length>0){
-    h+='<div class="card mt12"><div class="card-titulo">Cartoes</div>';
-    d.cartoes.forEach(function(c){var b=banco(c.banco),us=usadoCC(c,d.transacoes),pct=c.limite>0?Math.min(100,(us/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';h+='<div class="bud-item"><div class="bud-hdr"><div class="bud-cat"><span style="font-size:11px;font-weight:800;color:'+b.txt+';background:'+b.cor+';padding:2px 5px;border-radius:4px">'+b.sigla+'</span>'+(c.nome||b.nome)+'</div><div class="bud-vals">'+fR(us)+' / '+fR(c.limite)+'</div></div><div class="bud-bar"><div class="bud-fill" style="width:'+pct+'%;background:'+bc+'"></div></div><div class="bud-pct">'+pct.toFixed(0)+'% - Disponivel: '+fR(c.limite-us)+'</div></div>';});
+    h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Cartoes de Credito</div>';
+    h+='<div class="card">';
+    d.cartoes.forEach(function(c){
+      var b=banco(c.banco),us=usadoCC(c,d.transacoes),disp=c.limite-us,pct=c.limite>0?Math.min(100,(us/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
+      var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
+      var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
+      h+='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">';
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+      h+='<span style="font-size:11px;font-weight:800;color:'+b.txt+';background:'+b.cor+';padding:2px 7px;border-radius:4px;">'+b.sigla+'</span>';
+      h+='<span style="font-size:13px;font-weight:700;">'+(c.nome||b.nome)+'</span>';
+      h+='<span style="font-size:10px;color:var(--text2);">Vence dia '+c.diaVence+'</span>';
+      h+='</div>';
+      h+='<div class="bud-bar" style="height:8px;margin-bottom:6px;"><div class="bud-fill" style="width:'+pct+'%;background:'+bc+'"></div></div>';
+      h+='<div style="display:flex;justify-content:space-between;font-size:11px;">';
+      h+='<span>Usado: <b style="color:'+bc+'">'+fR(us)+'</b></span>';
+      h+='<span>Disponivel: <b style="color:var(--accent)">'+fR(disp)+'</b></span>';
+      h+='<span>Limite: <b>'+fR(c.limite)+'</b></span>';
+      h+='</div>';
+      if(parc.length>0){h+='<div style="font-size:11px;color:var(--text2);margin-top:5px;">'+parc.length+' parcela(s) futuras comprometidas: <b style="color:var(--red)">'+fR(totParc)+'</b></div>';}
+      h+='</div>';
+    });
     h+='</div>';
   }
+
   return h;
 }
-
 //  HELPERS 
 function banco(id){return BANCOS.find(function(b){return b.id===id;})||BANCOS[BANCOS.length-1];}
 
