@@ -88,6 +88,34 @@ function ciclo(c){
   return{ini:ini,fim:fim};
 }
 function usadoCC(c,txs){var cv=ciclo(c);return txs.filter(function(t){if(!t.cartaoId||t.cartaoId!==c.id)return false;var d=new Date(t.data+'T12:00:00');return d>=cv.ini&&d<cv.fim;}).reduce(function(a,t){return a+t.valor;},0);}
+function comprometidoCC(c,txs){
+  // Fatura atual
+  var fatAtual=usadoCC(c,txs);
+  // Parcelas futuras restantes (excluindo as que ja estao na fatura atual)
+  var cv=ciclo(c);
+  var parcFuturas=txs.filter(function(t){
+    if(!t.cartaoId||t.cartaoId!==c.id)return false;
+    if(!t.parcTotal||t.parcAtual>=t.parcTotal)return false;
+    // So conta parcelas que ainda nao entraram na fatura atual
+    var d=new Date(t.data+'T12:00:00');
+    var naFaturaAtual=d>=cv.ini&&d<cv.fim;
+    return !naFaturaAtual;
+  }).reduce(function(a,t){
+    var restantes=t.parcTotal-t.parcAtual;
+    return a+(t.valor*restantes);
+  },0);
+  // Tambem conta parcelas da fatura atual que tem mais parcelas futuras
+  var parcDaFaturaComFuturas=txs.filter(function(t){
+    if(!t.cartaoId||t.cartaoId!==c.id)return false;
+    if(!t.parcTotal||t.parcAtual>=t.parcTotal)return false;
+    var d=new Date(t.data+'T12:00:00');
+    return d>=cv.ini&&d<cv.fim;
+  }).reduce(function(a,t){
+    var restantes=t.parcTotal-t.parcAtual-1; // -1 pq a atual ja esta em fatAtual
+    return a+(restantes>0?t.valor*restantes:0);
+  },0);
+  return fatAtual+parcFuturas+parcDaFaturaComFuturas;
+}
 function faturaCC(c,txs){var cv=ciclo(c);return txs.filter(function(t){if(!t.cartaoId||t.cartaoId!==c.id)return false;var d=new Date(t.data+'T12:00:00');return d>=cv.ini&&d<cv.fim;});}
 function txMes(txs){return txs.filter(function(t){var d=new Date(t.data+'T12:00:00');return d.getMonth()===mes&&d.getFullYear()===ano;});}
 function fixosPend(txs){
@@ -278,7 +306,7 @@ function rInicio(){
     h+='<div class="sec-hdr mt8"><span class="sec-titulo">Cartoes</span><span class="sec-link" onclick="nav(\'cartoes\')">Ver todos</span></div>';
     h+='<div class="hscroll">';
     d.cartoes.forEach(function(c,i){
-      var b=banco(c.banco),us=usadoCC(c,d.transacoes),disp=c.limite-us;
+      var b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp;
       var pct=c.limite>0?Math.min(100,(us/c.limite)*100):0;
       var bc=pct>85?'#ff6b6b':pct>60?'#fbbf24':'#00e5a0';
       // Parcelas futuras comprometidas
@@ -401,7 +429,7 @@ function rCartoes(){
 
   if(d.cartoes.length===0){h+='<div class="card" style="text-align:center;padding:36px"><div style="font-size:36px;margin-bottom:10px">&#x1F4B3;</div><div style="color:var(--text2);margin-bottom:14px">Nenhum cartao cadastrado</div><button class="sbtn" onclick="abM(\'sh-cartao\')">Adicionar Cartao</button></div>';return h;}
 
-  var c=d.cartoes[ccIdx]||d.cartoes[0],b=banco(c.banco),us=usadoCC(c,d.transacoes),disp=c.limite-us,pct=c.limite>0?Math.min(100,(us/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
+  var c=d.cartoes[ccIdx]||d.cartoes[0],b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp,pct=c.limite>0?Math.min(100,(us/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
   h+='<div style="background:linear-gradient(145deg,'+b.cor+'dd,'+b.cor+'88);border-radius:var(--r);padding:16px;margin-bottom:10px"><div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:#fff">'+(c.nome||b.nome)+'</div><div style="color:rgba(255,255,255,.6);font-size:11px">'+(c.bandeira||'')+' **** '+(c.digitos||'0000')+'</div><div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.6);margin-bottom:4px"><span>Usado: '+fR(us)+'</span><span>Limite: '+fR(c.limite)+'</span></div><div style="height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:3px"></div></div></div><div class="cc-stats"><div class="cc-stat"><div class="cc-stat-l">Disponivel</div><div class="cc-stat-v">'+fRs(disp)+'</div></div><div class="cc-stat"><div class="cc-stat-l">Fecha dia</div><div class="cc-stat-v">'+(c.diaFecha||'?')+'</div></div><div class="cc-stat"><div class="cc-stat-l">Vence dia</div><div class="cc-stat-v">'+(c.diaVence||'?')+'</div></div></div></div>';
   h+='<div style="display:flex;gap:8px;margin-bottom:12px"><button class="sbtn" style="flex:1;padding:12px;font-size:13px;margin:0" onclick="abTxCC()">+ Lancar</button><button style="flex:0.5;padding:12px;background:rgba(255,107,107,.15);color:var(--red);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer" onclick="delCC('+ccIdx+')">Excluir</button></div>';
 
@@ -615,7 +643,7 @@ function rRel(){
     h+='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;">Cartoes de Credito</div>';
     h+='<div class="card">';
     d.cartoes.forEach(function(c){
-      var b=banco(c.banco),us=usadoCC(c,d.transacoes),disp=c.limite-us,pct=c.limite>0?Math.min(100,(us/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
+      var b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp,pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
       var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
       var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
       h+='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">';
