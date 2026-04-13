@@ -215,183 +215,85 @@ function rInicio(){
   var d=gd(),ts=txMes(d.transacoes),chave=mes+'-'+ano;
   var hoje=new Date();
 
-  // Receitas do mes
+  // Calculos base
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
-
-  // Despesas pagas (variaveis + fixos confirmados + cartao)
   var depPago=ts.filter(function(t){
     if(t.tipo!=='despesa')return false;
     if(t.fixo==='fixo'&&!t.cartaoId)return t.pagamentos&&t.pagamentos[chave];
     return true;
   }).reduce(function(a,t){return a+t.valor;},0);
-
-  // Fixos pendentes
   var fpend=fixosPend(d.transacoes);
   var depPend=fpend.reduce(function(a,t){return a+t.valor;},0);
-
-  // Patrimonio e saldos
   var tot=d.contas.reduce(function(a,c){return a+(c.saldo||0);},0);
-  var saldoReal=rec-depPago;
+  var saldoMes=rec-depPago;
   var saldoProj=rec-depPago-depPend;
-  var depTotal=depPago+depPend;
+  var diasRest=new Date(ano,mes+1,0).getDate()-hoje.getDate();
 
-  // Mes anterior para comparacao
+  // Tendencia vs mes anterior
   var mesAnt=mes-1,anoAnt=ano;
   if(mesAnt<0){mesAnt=11;anoAnt--;}
   var tsAnt=d.transacoes.filter(function(t){var dt=new Date(t.data+'T12:00:00');return dt.getMonth()===mesAnt&&dt.getFullYear()===anoAnt;});
-  var recAnt=tsAnt.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
-  var depAnt=tsAnt.filter(function(t){return t.tipo==='despesa';}).reduce(function(a,t){return a+t.valor;},0);
-  var saldoAnt=recAnt-depAnt;
-  var tendencia=saldoProj>=saldoAnt?'up':'down';
+  var saldoAnt=tsAnt.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0)-tsAnt.filter(function(t){return t.tipo==='despesa';}).reduce(function(a,t){return a+t.valor;},0);
+  var tendUp=saldoProj>=saldoAnt;
 
-  // Dias restantes no mes
-  var ultimoDia=new Date(ano,mes+1,0).getDate();
-  var diasRest=ultimoDia-hoje.getDate();
-
-  // Orcamento total vs gasto
-  var orcTotal=Object.values(d.orcamentos||{}).reduce(function(a,v){return a+v;},0);
-  var catMap={};
-  ts.filter(function(t){return t.tipo==='despesa';}).forEach(function(t){catMap[t.cat]=(catMap[t.cat]||0)+t.valor;});
-  var gastoOrc=Object.keys(d.orcamentos||{}).reduce(function(a,cid){return a+(catMap[cid]||0);},0);
-  var orcPct=orcTotal>0?Math.min(100,Math.round((gastoOrc/orcTotal)*100)):0;
-
-  // Barra receita vs pago
-  var tot2=rec+depPago,rPct=tot2>0?Math.round((rec/tot2)*100):50;
-
-  var h='';
-
-  // ALERTAS INTELIGENTES
-  var alertas=[];
-  // Fatura vencendo
+  // Alerta mais urgente
+  var alertaTop=null;
   d.cartoes.forEach(function(c){
     var dv=parseInt(c.diaVence)||10;
     var venc=new Date(hoje.getFullYear(),hoje.getMonth(),dv);
     if(venc<hoje)venc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dv);
     var diff=Math.ceil((venc-hoje)/(1000*60*60*24));
     var us=usadoCC(c,d.transacoes);
-    if(diff<=5&&diff>=0&&us>0){
-      alertas.push({tipo:'danger',ic:'&#x1F4B3;',txt:'Fatura '+(c.nome||'Cartao')+' vence em '+diff+' dia(s) - '+fR(us)});
+    if(diff<=5&&diff>=0&&us>0&&!alertaTop){
+      alertaTop={cor:'var(--red)',txt:'Fatura '+(c.nome||'Cartao')+' vence em '+diff+' dia(s) - '+fR(us)};
     }
   });
-  // Orcamento estourado/proximo
-  Object.keys(d.orcamentos||{}).forEach(function(cid){
-    var lim=d.orcamentos[cid],gasto=catMap[cid]||0,pct=lim>0?(gasto/lim)*100:0;
-    var cat=getCat(cid);
-    if(pct>=100)alertas.push({tipo:'danger',ic:cat.ic,txt:cat.nome+': orcamento estourado! '+fR(gasto)+' de '+fR(lim)});
-    else if(pct>=80)alertas.push({tipo:'warn',ic:cat.ic,txt:cat.nome+': '+Math.round(pct)+'% do orcamento usado ('+fR(gasto)+' de '+fR(lim)+')'});
-  });
-  // Comparativo categoria com mes anterior
-  Object.keys(catMap).forEach(function(cid){
-    var gastoAtual=catMap[cid]||0;
-    var gastoAntC=tsAnt.filter(function(t){return t.tipo==='despesa'&&t.cat===cid;}).reduce(function(a,t){return a+t.valor;},0);
-    if(gastoAntC>0&&gastoAtual>gastoAntC*1.3&&gastoAtual>50){
-      var cat=getCat(cid);
-      alertas.push({tipo:'info',ic:cat.ic,txt:cat.nome+' '+Math.round(((gastoAtual-gastoAntC)/gastoAntC)*100)+'% acima do mes passado ('+fR(gastoAtual)+' vs '+fR(gastoAntC)+')'});
-    }
-  });
-
-  if(alertas.length>0){
-    h+='<div style="margin-bottom:10px;">';
-    alertas.slice(0,3).forEach(function(a){
-      var bg=a.tipo==='danger'?'rgba(255,107,107,.08)':a.tipo==='warn'?'rgba(251,191,36,.08)':'rgba(56,189,248,.08)';
-      var border=a.tipo==='danger'?'rgba(255,107,107,.25)':a.tipo==='warn'?'rgba(251,191,36,.25)':'rgba(56,189,248,.25)';
-      var cor=a.tipo==='danger'?'var(--red)':a.tipo==='warn'?'var(--yellow)':'var(--blue)';
-      h+='<div style="background:'+bg+';border:1px solid '+border+';border-radius:var(--rsm);padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;">';
-      h+='<span style="font-size:16px;">'+a.ic+'</span>';
-      h+='<span style="font-size:12px;color:'+cor+';">'+a.txt+'</span>';
-      h+='</div>';
+  if(!alertaTop){
+    var catMap={};ts.filter(function(t){return t.tipo==='despesa';}).forEach(function(t){catMap[t.cat]=(catMap[t.cat]||0)+t.valor;});
+    Object.keys(d.orcamentos||{}).forEach(function(cid){
+      var lim=d.orcamentos[cid],gasto=catMap[cid]||0;
+      if(lim>0&&gasto>=lim&&!alertaTop)alertaTop={cor:'var(--yellow)',txt:getCat(cid).nome+': orcamento estourado ('+fR(gasto)+')'};
     });
-    h+='</div>';
   }
 
-  // HERO UNIFICADO
+  var h='';
+
+  // ALERTA - so 1, discreto
+  if(alertaTop){
+    h+='<div style="border-left:3px solid '+alertaTop.cor+';background:var(--bg2);border-radius:0 var(--rsm) var(--rsm) 0;padding:9px 12px;margin-bottom:10px;font-size:12px;color:'+alertaTop.cor+';">'+alertaTop.txt+'</div>';
+  }
+
+  // HERO LIMPO
   h+='<div class="hero" style="margin-bottom:12px;">';
-  // Linha topo: patrimonio + tendencia + dias restantes
-  h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
   h+='<div class="hero-label">Patrimonio Total</div>';
-  h+='<div style="display:flex;align-items:center;gap:8px;">';
-  h+='<span style="font-size:10px;color:var(--text2);">'+diasRest+' dias restantes</span>';
-  h+='<span style="font-size:14px;">'+(tendencia==='up'?'<span style="color:var(--accent);">&#8593;</span>':'<span style="color:var(--red);">&#8595;</span>')+'</span>';
-  h+='</div></div>';
-
-  // Valor principal com comparativo
-  h+='<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">';
-  h+='<div class="hero-valor'+(tot<0?' r':'')+'" style="margin-bottom:0;">'+fR(tot)+'</div>';
-  if(saldoAnt!==0){
-    var diffAnt=saldoProj-saldoAnt,diffCor=diffAnt>=0?'var(--accent)':'var(--red)';
-    h+='<div style="font-size:11px;color:'+diffCor+';">'+(diffAnt>=0?'+':'')+fR(diffAnt)+' vs mes ant.</div>';
-  }
+  h+='<div style="font-size:11px;color:var(--text2);">'+diasRest+' dias restantes '+(tendUp?'<span style="color:var(--accent);">&#8593;</span>':'<span style="color:var(--red);">&#8595;</span>')+'</div>';
   h+='</div>';
+  h+='<div class="hero-valor'+(tot<0?' r':'')+'" style="margin-bottom:10px;">'+fR(tot)+'</div>';
 
-  // A pagar e projetado inline
-  h+='<div style="display:flex;gap:12px;margin-bottom:12px;">';
-  if(depPend>0){
-    h+='<div style="font-size:11px;color:var(--yellow);">&#9888; A pagar: <b>'+fR(depPend)+'</b></div>';
-  }
-  h+='<div style="font-size:11px;color:'+(saldoProj>=0?'var(--accent)':'var(--red)')+';">Projetado: <b>'+fR(saldoProj)+'</b></div>';
-  h+='</div>';
-
-  // Barra receita vs gasto pago
+  // Barra receitas vs pago
+  var tot2=rec+depPago,rPct=tot2>0?Math.round((rec/tot2)*100):50;
   h+='<div class="hero-bar-labels"><span>&#x25BC; Recebido</span><span>Pago &#x25BC;</span></div>';
   h+='<div class="hero-bar"><div class="hero-bar-rec" style="width:'+rPct+'%"></div></div>';
   h+='<div class="hero-bar-vals"><span class="g">'+fR(rec)+'</span><span class="r">'+fR(depPago)+'</span></div>';
 
-  // Orcamento geral se tiver
-  if(orcTotal>0){
-    var orcCor=orcPct>=90?'var(--red)':orcPct>=70?'var(--yellow)':'var(--accent)';
-    h+='<div style="margin-top:10px;">';
-    h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px;">';
-    h+='<span>Orcamento mensal</span><span style="color:'+orcCor+';">'+orcPct+'% usado</span></div>';
-    h+='<div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">';
-    h+='<div style="height:100%;width:'+orcPct+'%;background:'+orcCor+';border-radius:2px;"></div></div>';
+  // 2 pills clicaveis
+  h+='<div style="display:flex;gap:8px;margin-top:12px;">';
+  if(depPend>0){
+    h+='<div onclick="abreAPagar()" style="flex:1;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:var(--rsm);padding:8px 12px;cursor:pointer;">';
+    h+='<div style="font-size:9px;color:var(--yellow);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">A Pagar &#8250;</div>';
+    h+='<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--yellow);">'+fR(depPend)+'</div>';
+    h+='<div style="font-size:10px;color:var(--text2);">'+fpend.length+' fixos pendentes</div>';
     h+='</div>';
   }
+  h+='<div onclick="abrePagos()" style="flex:1;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:var(--rsm);padding:8px 12px;cursor:pointer;">';
+  h+='<div style="font-size:9px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Pago &#8250;</div>';
+  h+='<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--red);">'+fR(depPago)+'</div>';
+  h+='<div style="font-size:10px;color:var(--text2);">Projetado: '+fR(saldoProj)+'</div>';
   h+='</div>';
+  h+='</div></div>';
 
-  // MINI CARDS - 4 indicadores
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
-  // Recebido
-  h+='<div style="background:var(--bg2);border:1px solid rgba(0,229,160,.2);border-radius:var(--rsm);padding:12px;">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Recebido</div>';
-  h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--accent);">'+fR(rec)+'</div>';
-  h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+ts.filter(function(t){return t.tipo==='receita';}).length+' lancamentos</div>';
-  h+='</div>';
-  // Pago
-  h+='<div style="background:var(--bg2);border:1px solid rgba(255,107,107,.2);border-radius:var(--rsm);padding:12px;cursor:pointer;" onclick="abrePagos()">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Pago &#8250;</div>';
-  h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--red);">'+fR(depPago)+'</div>';
-  h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+ts.filter(function(t){return t.tipo==='despesa';}).length+' lancamentos</div>';
-  h+='</div>';
-  // A pagar
-  h+='<div style="background:var(--bg2);border:1px solid rgba(251,191,36,.2);border-radius:var(--rsm);padding:12px;cursor:pointer;" onclick="abreAPagar()">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">A Pagar &#8250;</div>';
-  h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--yellow);">'+fR(depPend)+'</div>';
-  h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+fpend.length+' fixos pendentes</div>';
-  h+='</div>';
-  // Projetado
-  h+='<div style="background:var(--bg2);border:1px solid rgba(56,189,248,.2);border-radius:var(--rsm);padding:12px;">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Projetado</div>';
-  h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:'+(saldoProj>=0?'var(--blue)':'var(--red)')+';">'+fR(saldoProj)+'</div>';
-  h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">Apos pagar tudo</div>';
-  h+='</div>';
-  h+='</div>';
-
-  // Pago vs pendente barra (se tiver pendente)
-  if(depPend>0){
-    var pagoPct=depTotal>0?Math.round((depPago/depTotal)*100):0;
-    h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px;margin-bottom:12px;">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-    h+='<span style="font-size:11px;font-weight:600;color:var(--text2);">Despesas do Mes</span>';
-    h+='<span style="font-size:11px;color:var(--text2);">'+fR(depTotal)+'</span></div>';
-    h+='<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:5px;">';
-    h+='<div style="height:100%;width:'+pagoPct+'%;background:var(--accent);border-radius:3px;"></div></div>';
-    h+='<div style="display:flex;justify-content:space-between;">';
-    h+='<span style="font-size:10px;"><span style="color:var(--accent);">&#9679;</span> Pago: '+fR(depPago)+'</span>';
-    h+='<span style="font-size:10px;"><span style="color:var(--yellow);">&#9679;</span> A pagar: '+fR(depPend)+'</span>';
-    h+='</div></div>';
-  }
-
-  // Quick actions
+  // QUICK ACTIONS
   h+='<div class="qa-grid">';
   h+='<div class="qa" onclick="abTx(\"despesa\",false)"><div class="qa-icon" style="background:rgba(255,107,107,.15);color:#ff6b6b;font-size:22px;font-weight:700">-</div><div class="qa-label">Despesa</div></div>';
   h+='<div class="qa" onclick="abTx(\"receita\",false)"><div class="qa-icon" style="background:rgba(0,229,160,.15);color:#00e5a0;font-size:22px;font-weight:700">+</div><div class="qa-label">Receita</div></div>';
@@ -399,13 +301,13 @@ function rInicio(){
   h+='<div class="qa" onclick="abM(\"sh-cartao\")"><div class="qa-icon" style="background:rgba(167,139,250,.15);color:#a78bfa;font-size:18px">&#x1F4B3;</div><div class="qa-label">Cartao</div></div>';
   h+='</div>';
 
-  // Contas
+  // CONTAS
   h+='<div class="sec-hdr"><span class="sec-titulo">Contas</span><span class="sec-link" onclick="nav(\"relatorios\")">Relatorios</span></div>';
   h+='<div class="hscroll">';
   d.contas.forEach(function(c){var b=banco(c.banco);h+='<div class="ac-card"><div class="ac-bar" style="background:'+b.cor+'"></div><div class="ac-banco">'+b.sigla+' '+(c.nome||b.nome)+'</div><div class="ac-saldo">'+fRs(c.saldo)+'</div><div class="ac-tipo">'+c.tipo+'</div></div>';});
   h+='<div class="ac-card add" onclick="abM(\"sh-conta\")">+ Conta</div></div>';
 
-  // Cartoes
+  // CARTOES
   if(d.cartoes.length>0){
     h+='<div class="sec-hdr mt8"><span class="sec-titulo">Cartoes</span><span class="sec-link" onclick="nav(\"cartoes\")">Ver todos</span></div>';
     h+='<div class="hscroll">';
@@ -422,7 +324,7 @@ function rInicio(){
       var vencCor=diff<=5?'#ff6b6b':'rgba(255,255,255,.6)';
       var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
       var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
-      h+='<div class="cc-card" style="background:linear-gradient(145deg,'+b.cor+'cc,'+b.cor+'88);'+alertaBorda+'" onclick="ccIdx='+i+';nav("cartoes")">';
+      h+='<div class="cc-card" style="background:linear-gradient(145deg,'+b.cor+'cc,'+b.cor+'88);'+alertaBorda+'" onclick="ccIdx='+i+';nav(\"cartoes\")">';
       h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
       h+='<div style="font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;">'+(c.nome||b.nome)+'</div>';
       h+='<div style="font-size:9px;color:'+vencCor+';font-weight:600;">Venc. '+vencStr+'</div></div>';
@@ -441,28 +343,27 @@ function rInicio(){
     h+='</div>';
   }
 
-  // Fixos pendentes
-  var fps=fixosPend(d.transacoes);
-  if(fps.length>0){
+  // FIXOS PENDENTES - compacto, max 3
+  if(fpend.length>0){
     h+='<div class="fixos-card">';
-    h+='<div class="fixos-hdr"><span class="fixos-title">&#9888; Fixos Pendentes</span><span style="font-size:11px;color:var(--yellow);">'+fps.length+' itens - '+fR(depPend)+'</span></div>';
-    fps.slice(0,4).forEach(function(t){
+    h+='<div class="fixos-hdr"><span class="fixos-title">&#9888; Fixos Pendentes</span><span style="font-size:11px;color:var(--yellow);">'+fpend.length+' - '+fR(depPend)+'</span></div>';
+    fpend.slice(0,3).forEach(function(t){
       h+='<div class="fixo-item">';
-      h+='<div class="fixo-status pend" onclick="abrePag(\"'+t.id+'\")">&#9711;</div>';
-      h+='<div class="fixo-info"><div class="fixo-nome">'+t.desc+'</div><div class="fixo-data">Toque para confirmar pagamento</div></div>';
+      h+='<div class="fixo-status pend" onclick="abrePag(\""+t.id+"\")">&#9711;</div>';
+      h+='<div class="fixo-info"><div class="fixo-nome">'+t.desc+'</div><div class="fixo-data">Toque para confirmar</div></div>';
       h+='<div class="fixo-val">'+fR(t.valor)+'</div>';
       h+='</div>';
     });
-    if(fps.length>4){
-      h+='<div style="text-align:center;padding:8px 0;font-size:12px;color:var(--accent);cursor:pointer;" onclick="nav(\"lancamentos\")">Ver mais '+( fps.length-4)+' pendentes</div>';
+    if(fpend.length>3){
+      h+='<div onclick="abreAPagar()" style="text-align:center;padding:7px 0;font-size:12px;color:var(--accent);cursor:pointer;">Ver mais '+(fpend.length-3)+' pendentes &#8250;</div>';
     }
     h+='</div>';
   }
 
-  // Recentes
+  // RECENTES
   var rec5=ts.slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);}).slice(0,5);
   h+='<div class="sec-hdr mt12"><span class="sec-titulo">Recentes</span><span class="sec-link" onclick="nav(\"lancamentos\")">Ver todos</span></div>';
-  h+='<div class="card">'+(rec5.length===0?'<div class="tx-empty">Nenhum lancamento neste mes<br>Toque no + para comecar</div>':rec5.map(function(t){return txItem(t);}).join(''))+'</div>';
+  h+='<div class="card">'+(rec5.length===0?'<div class="tx-empty">Nenhum lancamento<br>Toque no + para comecar</div>':rec5.map(function(t){return txItem(t);}).join(''))+'</div>';
 
   return h;
 }
