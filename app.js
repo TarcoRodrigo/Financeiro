@@ -842,7 +842,46 @@ function setPriv(on){privado=on;renderPag();}
 
 //  BACKUP 
 function exportaDados(){var blob=new Blob([JSON.stringify(gd(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='financex_'+new Date().toISOString().split('T')[0]+'.json';a.click();URL.revokeObjectURL(url);toast('Exportado','ok');}
-function importaDados(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var dados=JSON.parse(e.target.result);if(dados.transacoes||dados.contas){save(dados);toast('Importado','ok');fechaDrawer();renderPag();}else toast('Arquivo invalido','err');}catch(err){toast('Erro ao importar','err');}};reader.readAsText(file);}
+function importaDados(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var novo=JSON.parse(e.target.result);
+      if(!novo.transacoes&&!novo.contas){toast('Arquivo invalido','err');return;}
+      var atual=gd();
+      // Mesclar transacoes - evitar duplicatas pelo id
+      var idsExist={};
+      atual.transacoes.forEach(function(t){idsExist[t.id]=true;});
+      var adicionados=0;
+      (novo.transacoes||[]).forEach(function(t){
+        if(!idsExist[t.id]){atual.transacoes.push(t);adicionados++;}
+      });
+      // Mesclar contas - evitar duplicatas pelo id
+      var contaIds={};
+      atual.contas.forEach(function(c){contaIds[c.id]=true;});
+      (novo.contas||[]).forEach(function(c){
+        if(!contaIds[c.id])atual.contas.push(c);
+      });
+      // Mesclar cartoes - evitar duplicatas pelo id
+      var ccIds={};
+      atual.cartoes.forEach(function(c){ccIds[c.id]=true;});
+      (novo.cartoes||[]).forEach(function(c){
+        if(!ccIds[c.id])atual.cartoes.push(c);
+      });
+      // Mesclar metas
+      var metaIds={};
+      atual.metas.forEach(function(m){metaIds[m.id]=true;});
+      (novo.metas||[]).forEach(function(m){
+        if(!metaIds[m.id])atual.metas.push(m);
+      });
+      save(atual);
+      toast(adicionados+' lancamentos importados','ok');
+      fechaDrawer();renderPag();
+    }catch(err){toast('Erro ao importar','err');}
+  };
+  reader.readAsText(file);
+}
 function limpaDados(){if(!confirm('Apagar TODOS os dados?'))return;if(!confirm('Confirma? Acao irreversivel.'))return;localStorage.removeItem('fx3');toast('Dados apagados','ok');fechaDrawer();renderPag();}
 
 //  TOAST 
