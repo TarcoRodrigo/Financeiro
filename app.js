@@ -184,23 +184,62 @@ function txItem(t,clicavel){
 
 //  RENDER INICIO 
 function rInicio(){
-  var d=gd(),ts=txMes(d.transacoes),rec=0,dep=0;
-  ts.forEach(function(t){if(t.tipo==='receita')rec+=t.valor;else dep+=t.valor;});
+  var d=gd(),ts=txMes(d.transacoes);
+  var chave=mes+'-'+ano;
+
+  // Receitas do mes
+  var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
+
+  // Despesas PAGAS: variaveis lancadas + fixos confirmados
+  var depPago=ts.filter(function(t){
+    if(t.tipo!=='despesa')return false;
+    if(t.fixo==='fixo'&&!t.cartaoId){
+      // fixo so conta se confirmado neste mes
+      return t.pagamentos&&t.pagamentos[chave];
+    }
+    return true; // variavel ou cartao: conta sempre
+  }).reduce(function(a,t){return a+t.valor;},0);
+
+  // Despesas PENDENTES: fixos nao confirmados
+  var depPend=fixosPend(d.transacoes).reduce(function(a,t){return a+t.valor;},0);
+
   var tot=d.contas.reduce(function(a,c){return a+(c.saldo||0);},0);
-  var tot2=rec+dep,rPct=tot2>0?Math.round((rec/tot2)*100):50;
-  var proj=calcProjetado();
+  var proj=rec-depPago-depPend; // saldo projetado apos pagar tudo
+  var saldoReal=rec-depPago;    // saldo atual so com o que foi pago
+
+  // Barra proporcional entre pago e pendente dentro das despesas totais
+  var depTotal=depPago+depPend;
+  var pagoPct=depTotal>0?Math.round((depPago/depTotal)*100):0;
+  // Barra receita vs despesa paga
+  var tot2=rec+depPago,rPct=tot2>0?Math.round((rec/tot2)*100):50;
 
   var h='<div class="hero">';
   h+='<div class="hero-label">Patrimonio Total</div>';
   h+='<div class="hero-valor'+(tot<0?' r':'')+'" style="margin-bottom:10px;">'+fR(tot)+'</div>';
-  h+='<div class="hero-bar-labels"><span>&#x25BC; Receitas</span><span>Gastos &#x25BC;</span></div>';
+  h+='<div class="hero-bar-labels"><span>&#x25BC; Recebido</span><span>Pago &#x25BC;</span></div>';
   h+='<div class="hero-bar"><div class="hero-bar-rec" style="width:'+rPct+'%"></div></div>';
-  h+='<div class="hero-bar-vals"><span class="g">'+fR(rec)+'</span><span class="r">'+fR(dep)+'</span></div>';
+  h+='<div class="hero-bar-vals"><span class="g">'+fR(rec)+'</span><span class="r">'+fR(depPago)+'</span></div>';
   h+='<div class="hero-row">';
-  h+='<div class="hero-pill"><div class="pl">Receitas</div><div class="pv g">'+fRs(rec)+'</div></div>';
-  h+='<div class="hero-pill"><div class="pl">Despesas</div><div class="pv r">'+fRs(dep)+'</div></div>';
-  h+='<div class="hero-pill"><div class="pl">Saldo</div><div class="pv '+(rec-dep>=0?'g':'r')+'">'+fRs(rec-dep)+'</div></div>';
+  h+='<div class="hero-pill"><div class="pl">Recebido</div><div class="pv g">'+fRs(rec)+'</div></div>';
+  h+='<div class="hero-pill"><div class="pl">Pago</div><div class="pv r">'+fRs(depPago)+'</div></div>';
+  h+='<div class="hero-pill"><div class="pl">Saldo Real</div><div class="pv '+(saldoReal>=0?'g':'r')+'">'+fRs(saldoReal)+'</div></div>';
   h+='</div></div>';
+
+  // Resumo pago vs pendente
+  if(depPend>0){
+    h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+    h+='<span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Despesas do Mes</span>';
+    h+='<span style="font-size:11px;color:var(--text2);">'+fR(depTotal)+'</span>';
+    h+='</div>';
+    h+='<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px;">';
+    h+='<div style="height:100%;width:'+pagoPct+'%;background:var(--accent);border-radius:3px;"></div>';
+    h+='</div>';
+    h+='<div style="display:flex;justify-content:space-between;">';
+    h+='<span style="font-size:11px;"><span style="color:var(--accent);">&#9679;</span> Pago: '+fR(depPago)+'</span>';
+    h+='<span style="font-size:11px;"><span style="color:var(--yellow);">&#9679;</span> A pagar: '+fR(depPend)+'</span>';
+    h+='</div></div>';
+  }
 
   // Saldo projetado
   h+='<div class="proj-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Saldo Projetado</div><div style="font-size:11px;color:var(--text2);">Apos pagar todos os fixos</div></div><div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:'+(proj>=0?'var(--accent)':'var(--red)')+'">'+fR(proj)+'</div></div></div>';
