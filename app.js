@@ -357,14 +357,14 @@ function rInicio(){
   h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+ts.filter(function(t){return t.tipo==='receita';}).length+' lancamentos</div>';
   h+='</div>';
   // Pago
-  h+='<div style="background:var(--bg2);border:1px solid rgba(255,107,107,.2);border-radius:var(--rsm);padding:12px;">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Pago</div>';
+  h+='<div style="background:var(--bg2);border:1px solid rgba(255,107,107,.2);border-radius:var(--rsm);padding:12px;cursor:pointer;" onclick="abrePagos()">';
+  h+='<div style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Pago &#8250;</div>';
   h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--red);">'+fR(depPago)+'</div>';
   h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+ts.filter(function(t){return t.tipo==='despesa';}).length+' lancamentos</div>';
   h+='</div>';
   // A pagar
-  h+='<div style="background:var(--bg2);border:1px solid rgba(251,191,36,.2);border-radius:var(--rsm);padding:12px;">';
-  h+='<div style="font-size:9px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">A Pagar</div>';
+  h+='<div style="background:var(--bg2);border:1px solid rgba(251,191,36,.2);border-radius:var(--rsm);padding:12px;cursor:pointer;" onclick="abreAPagar()">';
+  h+='<div style="font-size:9px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">A Pagar &#8250;</div>';
   h+='<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--yellow);">'+fR(depPend)+'</div>';
   h+='<div style="font-size:10px;color:var(--text2);margin-top:2px;">'+fpend.length+' fixos pendentes</div>';
   h+='</div>';
@@ -1218,6 +1218,62 @@ function importaDados(input){
   reader.readAsText(file);
 }
 function limpaDados(){if(!confirm('Apagar TODOS os dados?'))return;if(!confirm('Confirma? Acao irreversivel.'))return;localStorage.removeItem('fx3');toast('Dados apagados','ok');fechaDrawer();renderPag();}
+
+function abrePagos(){
+  var d=gd(),ts=txMes(d.transacoes),chave=mes+'-'+ano;
+  var pagos=ts.filter(function(t){
+    if(t.tipo!=='despesa')return false;
+    if(t.fixo==='fixo'&&!t.cartaoId)return t.pagamentos&&t.pagamentos[chave];
+    return true;
+  }).sort(function(a,b){return new Date(b.data)-new Date(a.data);});
+  var total=pagos.reduce(function(a,t){return a+t.valor;},0);
+  var el=document.getElementById('lista-pagos');
+  if(!el)return;
+  if(pagos.length===0){el.innerHTML='<div class="tx-empty">Nenhum pagamento neste mes</div>';}
+  else{
+    var h='<div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text2);">'+pagos.length+' lancamentos</span><span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--accent);">'+fR(total)+'</span></div>';
+    h+='<div class="card">'+pagos.map(function(t){return txItem(t);}).join('')+'</div>';
+    el.innerHTML=h;
+  }
+  abM('sh-pagos');
+}
+function abreAPagar(){
+  var d=gd(),fps=fixosPend(d.transacoes);
+  var total=fps.reduce(function(a,t){return a+t.valor;},0);
+  var el=document.getElementById('lista-apagar');
+  if(!el)return;
+  el.innerHTML='';
+  if(fps.length===0){
+    el.innerHTML='<div class="tx-empty">Nenhum fixo pendente neste mes</div>';
+    abM('sh-apagar');return;
+  }
+  var summ=document.createElement('div');
+  summ.style.cssText='background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+  summ.innerHTML='<span style="font-size:12px;color:var(--text2);">'+fps.length+' pendentes</span><span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--yellow);">'+fR(total)+'</span>';
+  el.appendChild(summ);
+  var card=document.createElement('div');
+  card.className='card';
+  fps.forEach(function(t){
+    var cat=getCat(t.cat);
+    var row=document.createElement('div');row.className='tx-item';
+    var ic=document.createElement('div');ic.className='tx-icone';
+    ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;
+    var info=document.createElement('div');info.className='tx-info';
+    info.innerHTML='<div class="tx-nome">'+t.desc+(t.parcTotal?' ('+t.parcAtual+'/'+t.parcTotal+')':'')+'</div><div class="tx-cat">'+cat.nome+' <span class="badge-pend">Pendente</span></div>';
+    var right=document.createElement('div');right.className='tx-right';
+    var val=document.createElement('div');val.className='tx-valor r';val.textContent='-'+fR(t.valor);
+    var bw=document.createElement('div');bw.style.marginTop='4px';
+    var btn=document.createElement('button');btn.textContent='Pagar';
+    btn.style.cssText='font-size:10px;font-weight:700;color:#000;background:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer;';
+    btn.onclick=(function(tid){return function(){fcM('sh-apagar');abrePag(tid);};})(t.id);
+    bw.appendChild(btn);right.appendChild(val);right.appendChild(bw);
+    row.appendChild(ic);row.appendChild(info);row.appendChild(right);
+    card.appendChild(row);
+  });
+  el.appendChild(card);
+  abM('sh-apagar');
+}
+
 
 //  TOAST 
 function toast(msg,tipo){var el=document.getElementById('toast');if(!el)return;el.textContent=msg;el.className='toast '+(tipo||'ok')+' show';clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},2800);}

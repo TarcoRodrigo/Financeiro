@@ -227,6 +227,25 @@
  </div>
 </div>
 
+
+<!-- SHEET: LANCAMENTOS PAGOS -->
+<div class="overlay" id="sh-pagos" onclick="fcMF(event,'sh-pagos')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>Pagamentos do Mes</span><button onclick="fcM('sh-pagos')">&#10005;</button></div>
+  <div id="lista-pagos"></div>
+ </div>
+</div>
+
+<!-- SHEET: LANCAMENTOS A PAGAR -->
+<div class="overlay" id="sh-apagar" onclick="fcMF(event,'sh-apagar')">
+ <div class="sheet" onclick="event.stopPropagation()">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><span>A Pagar</span><button onclick="fcM('sh-apagar')">&#10005;</button></div>
+  <div id="lista-apagar"></div>
+ </div>
+</div>
+
 <div id="toast"></div>
 <script src="app.js"></script>
 </body>
