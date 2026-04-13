@@ -1,4 +1,4 @@
-// FinanceX app.js v2.0
+// FinanceX v3.0 BUILD-20260413-NOVO
 
 //  MASCARA 
 function mask(el){var v=el.value.replace(/\D/g,'');if(!v){el.value='';return;}v=(parseInt(v,10)/100).toFixed(2);el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
