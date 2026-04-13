@@ -124,6 +124,7 @@ function fixosPend(txs){
     var pago=t.pagamentos&&t.pagamentos[chave];return!pago;
   });
 }
+function aPagar(txs){var chave=mes+'-'+ano;return txMes(txs).filter(function(t){if(t.tipo!=='despesa')return false;if(t.cartaoId)return false;return!(t.pagamentos&&t.pagamentos[chave]);});}
 
 //  NOTIFICACOES 
 function verificaNotifs(){
@@ -222,7 +223,7 @@ function rInicio(){
     if(t.fixo==='fixo'&&!t.cartaoId)return t.pagamentos&&t.pagamentos[chave];
     return true;
   }).reduce(function(a,t){return a+t.valor;},0);
-  var fpend=fixosPend(d.transacoes);
+  var fpend=aPagar(d.transacoes);
   var depPend=fpend.reduce(function(a,t){return a+t.valor;},0);
   var tot=d.contas.reduce(function(a,c){return a+(c.saldo||0);},0);
   var saldoMes=rec-depPago;
@@ -346,7 +347,7 @@ function rInicio(){
   // FIXOS PENDENTES - compacto, max 3
   if(fpend.length>0){
     h+='<div class="fixos-card">';
-    h+='<div class="fixos-hdr"><span class="fixos-title">&#9888; Fixos Pendentes</span><span style="font-size:11px;color:var(--yellow);">'+fpend.length+' - '+fR(depPend)+'</span></div>';
+    h+='<div class="fixos-hdr"><span class="fixos-title">&#9888; A Pagar</span><span style="font-size:11px;color:var(--yellow);">'+fpend.length+' - '+fR(depPend)+'</span></div>';
     fpend.slice(0,3).forEach(function(t){
       h+='<div class="fixo-item">';
       h+='<div class="fixo-status pend" onclick="abrePag(\""+t.id+"\")">&#9711;</div>';
@@ -1139,44 +1140,84 @@ function abrePagos(){
   abM('sh-pagos');
 }
 function abreAPagar(){
-  var d=gd(),fps=fixosPend(d.transacoes);
-  var total=fps.reduce(function(a,t){return a+t.valor;},0);
+  var d=gd(),fps=aPagar(d.transacoes);
   var el=document.getElementById('lista-apagar');
   if(!el)return;
   el.innerHTML='';
+
   if(fps.length===0){
-    el.innerHTML='<div class="tx-empty">Nenhum fixo pendente neste mes</div>';
+    el.innerHTML='<div class="tx-empty">Nenhuma conta pendente</div>';
     abM('sh-apagar');return;
   }
-  var summ=document.createElement('div');
-  summ.style.cssText='background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
-  summ.innerHTML='<span style="font-size:12px;color:var(--text2);">'+fps.length+' pendentes</span><span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--yellow);">'+fR(total)+'</span>';
-  el.appendChild(summ);
-  var card=document.createElement('div');
-  card.className='card';
+
+  var hoje=new Date();
+  hoje.setHours(0,0,0,0);
+
+  // Separar em grupos
+  var atrasadas=[],deHoje=[],futuras=[];
   fps.forEach(function(t){
-    var cat=getCat(t.cat);
-    var row=document.createElement('div');row.className='tx-item';
-    var ic=document.createElement('div');ic.className='tx-icone';
-    ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;
-    var info=document.createElement('div');info.className='tx-info';
-    info.innerHTML='<div class="tx-nome">'+t.desc+(t.parcTotal?' ('+t.parcAtual+'/'+t.parcTotal+')':'')+'</div><div class="tx-cat">'+cat.nome+' <span class="badge-pend">Pendente</span></div>';
-    var right=document.createElement('div');right.className='tx-right';
-    var val=document.createElement('div');val.className='tx-valor r';val.textContent='-'+fR(t.valor);
-    var bw=document.createElement('div');bw.style.marginTop='4px';
-    var btn=document.createElement('button');btn.textContent='Pagar';
-    btn.style.cssText='font-size:10px;font-weight:700;color:#000;background:var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer;';
-    btn.onclick=(function(tid){return function(){fcM('sh-apagar');abrePag(tid);};})(t.id);
-    bw.appendChild(btn);right.appendChild(val);right.appendChild(bw);
-    row.appendChild(ic);row.appendChild(info);row.appendChild(right);
-    card.appendChild(row);
+    var dt=new Date(t.data+'T12:00:00');
+    dt.setHours(0,0,0,0);
+    var diff=Math.round((dt-hoje)/(1000*60*60*24));
+    if(diff<0) atrasadas.push(t);
+    else if(diff===0) deHoje.push(t);
+    else futuras.push(t);
   });
-  el.appendChild(card);
+
+  // Sort: atrasadas mais antigas primeiro, futuras mais proximas primeiro
+  atrasadas.sort(function(a,b){return new Date(a.data)-new Date(b.data);});
+  deHoje.sort(function(a,b){return new Date(a.data)-new Date(b.data);});
+  futuras.sort(function(a,b){return new Date(a.data)-new Date(b.data);});
+
+  function mkGrupo(lista, titulo, cor, icone){
+    if(lista.length===0)return null;
+    var total=lista.reduce(function(a,t){return a+t.valor;},0);
+    var wrap=document.createElement('div');
+    wrap.style.marginBottom='14px';
+    // Header do grupo
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';
+    hdr.innerHTML='<div style="display:flex;align-items:center;gap:7px;"><span>'+icone+'</span><span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+'</span><span style="font-size:11px;color:var(--text2);">'+lista.length+' item(s)</span></div><span style="font-family:var(--font-h);font-size:13px;font-weight:800;color:'+cor+';">'+fR(total)+'</span>';
+    wrap.appendChild(hdr);
+    // Itens
+    var card=document.createElement('div');
+    card.className='card';
+    card.style.padding='0';
+    lista.forEach(function(t){
+      var cat=getCat(t.cat);
+      var dt=new Date(t.data+'T12:00:00');
+      var diffD=Math.round((dt-hoje)/(1000*60*60*24));
+      var dataStr=diffD<0?'Atrasado '+Math.abs(diffD)+' dia(s)':diffD===0?'Hoje':dt.getDate()+'/'+(dt.getMonth()+1);
+      var row=document.createElement('div');
+      row.className='tx-item';
+      row.style.padding='10px 14px';
+      var ic=document.createElement('div');ic.className='tx-icone';ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;
+      var info=document.createElement('div');info.className='tx-info';
+      info.innerHTML='<div class="tx-nome">'+t.desc+(t.parcTotal?' ('+t.parcAtual+'/'+t.parcTotal+')':'')+'</div><div class="tx-cat">'+cat.nome+(t.fixo==='fixo'?' Fixo':'')+'</div>';
+      var right=document.createElement('div');right.className='tx-right';
+      var val=document.createElement('div');val.className='tx-valor r';val.textContent='-'+fR(t.valor);
+      var dt2=document.createElement('div');dt2.className='tx-data';dt2.style.color=cor;dt2.textContent=dataStr;
+      var bw=document.createElement('div');bw.style.marginTop='4px';
+      var btn=document.createElement('button');btn.textContent='Pagar';
+      btn.style.cssText='font-size:10px;font-weight:700;color:#000;background:'+cor+';border-radius:6px;padding:3px 8px;cursor:pointer;';
+      btn.onclick=(function(tid){return function(){fcM('sh-apagar');abrePag(tid);};})(t.id);
+      bw.appendChild(btn);right.appendChild(val);right.appendChild(dt2);right.appendChild(bw);
+      row.appendChild(ic);row.appendChild(info);row.appendChild(right);
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  var gAtras=mkGrupo(atrasadas,'Atrasadas','#ff6b6b','&#128308;');
+  var gHoje=mkGrupo(deHoje,'Hoje','#fbbf24','&#128993;');
+  var gFut=mkGrupo(futuras,'Proximas','#94a3b8','&#9898;');
+
+  if(gAtras)el.appendChild(gAtras);
+  if(gHoje)el.appendChild(gHoje);
+  if(gFut)el.appendChild(gFut);
   abM('sh-apagar');
 }
-
-
-//  TOAST 
 function toast(msg,tipo){var el=document.getElementById('toast');if(!el)return;el.textContent=msg;el.className='toast '+(tipo||'ok')+' show';clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},2800);}
 
 //  SW 
