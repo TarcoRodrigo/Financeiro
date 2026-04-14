@@ -509,7 +509,7 @@ function rCartaoDetalhe(d){
 
   // Header com botao voltar
   var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
-  h+='<button onclick="ccIdx=-1;renderPag()" style="width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8592;</button>';
+  h+='<button onclick="voltarLista()" style="width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8592;</button>';
   h+='<div style="display:flex;align-items:center;gap:10px;flex:1;">';
   h+='<div style="width:40px;height:40px;border-radius:10px;background:'+b.cor+';display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:14px;font-weight:800;color:'+b.txt+';">'+b.sigla+'</div>';
   h+='<div><div style="font-size:16px;font-weight:700;">'+(c.nome||b.nome)+'</div><div style="font-size:11px;color:var(--text2);">'+(c.bandeira||b.nome)+' - Fecha dia '+(c.diaFecha||'?')+' - Vence dia '+(c.diaVence||'?')+'</div></div>';
@@ -541,7 +541,16 @@ function rCartaoDetalhe(d){
   h+=buildLancamentosCC(c,d.transacoes);
   return h;
 }
-function selCartao(i){ccIdx=i;renderPag();}
+function selCartao(i){
+  ccIdx=i;
+  var el=document.getElementById('conteudo');
+  if(el){el.innerHTML=rCartaoDetalhe(gd());el.scrollTop=0;}
+}
+function voltarLista(){
+  ccIdx=-1;
+  var el=document.getElementById('conteudo');
+  if(el){el.innerHTML=rCartoesList(gd());el.scrollTop=0;}
+}
 function delCC(i){if(!confirm('Excluir cartao?'))return;var d=gd();d.cartoes.splice(i,1);save(d);ccIdx=-1;toast('Cartao excluido','ok');renderPag();}
 
 //  RENDER METAS 
