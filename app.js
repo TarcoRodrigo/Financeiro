@@ -124,7 +124,17 @@ function fixosPend(txs){
     var pago=t.pagamentos&&t.pagamentos[chave];return!pago;
   });
 }
-function aPagar(txs){var chave=mes+'-'+ano;return txMes(txs).filter(function(t){if(t.tipo!=='despesa')return false;if(t.cartaoId)return false;return!(t.pagamentos&&t.pagamentos[chave]);});}
+function aPagar(txs){
+  var chave=mes+'-'+ano;
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  return txMes(txs).filter(function(t){
+    if(t.tipo!=='despesa')return false;
+    if(t.cartaoId)return false;
+    if(t.pagamentos&&t.pagamentos[chave])return false; // ja confirmado
+    var dt=new Date(t.data+'T12:00:00');dt.setHours(0,0,0,0);
+    return dt>hoje; // so futuras ficam pendentes
+  });
+}
 
 //  NOTIFICACOES 
 function verificaNotifs(){
@@ -198,9 +208,10 @@ function txItem(t,clicavel){
   var cat=getCat(t.cat),d=new Date(t.data+'T12:00:00'),isR=t.tipo==='receita';
   var ex=(t.parcTotal?' '+t.parcAtual+'/'+t.parcTotal:'')+(t.fixo==='fixo'?' Fixo':'');
   var badge='';
-  if(t.fixo==='fixo'&&t.tipo==='despesa'&&!t.cartaoId){
+  if(t.tipo==='despesa'&&!t.cartaoId){
     var chave=mes+'-'+ano,pago=t.pagamentos&&t.pagamentos[chave];
-    badge=pago?'<span class="badge-pago">Pago '+fData(pago)+'</span>':'<span class="badge-pend">Pendente</span>';
+    if(pago){badge='<span class="badge-pago">Pago '+fData(pago)+'</span>';}
+    else{var dtb=new Date(t.data+'T12:00:00');dtb.setHours(0,0,0,0);var hjb=new Date();hjb.setHours(0,0,0,0);if(dtb>hjb)badge='<span class="badge-pend">Pendente</span>';}
   }
   var foto=t.foto?'<span style="color:var(--blue);margin-left:4px;">&#128247;</span>':'';
   var cl=clicavel!==false?'onclick="abreEditTx(\''+t.id+'\')"':'';
@@ -219,10 +230,13 @@ function rInicio(){
 
   // Calculos base
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
+  var hoje2=new Date();hoje2.setHours(0,0,0,0);
   var depPago=ts.filter(function(t){
     if(t.tipo!=='despesa')return false;
-    if(t.fixo==='fixo'&&!t.cartaoId)return t.pagamentos&&t.pagamentos[chave];
-    return true;
+    if(t.cartaoId)return true; // cartao sempre pago
+    if(t.pagamentos&&t.pagamentos[chave])return true; // confirmado
+    var dt=new Date(t.data+'T12:00:00');dt.setHours(0,0,0,0);
+    return dt<=hoje2; // data hoje ou passada = ja pago
   }).reduce(function(a,t){return a+t.valor;},0);
   var fpend=aPagar(d.transacoes);
   var depPend=fpend.reduce(function(a,t){return a+t.valor;},0);
