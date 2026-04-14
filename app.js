@@ -658,49 +658,102 @@ function abrePagos(){
     if(t.pagamentos&&t.pagamentos[chave])return true;
     return dataD(t.data)<=hj;
   }).sort(function(a,b){return new Date(b.data)-new Date(a.data);});
-  var total=pagos.reduce(function(a,t){return a+t.valor;},0);
+  var fatPagas=d.cartoes.filter(function(c){return c.faturas&&c.faturas[chave];}).map(function(c){
+    var us=usadoCC(c,d.transacoes),atrasado=c.faturasAtraso&&c.faturasAtraso[chave],b=banco(c.banco);
+    return '<div class="tx-item"><div class="tx-icone" style="background:'+b.cor+'22;color:'+b.cor+'">&#x1F4B3;</div><div class="tx-info"><div class="tx-nome">Fatura '+(c.nome||b.nome)+'</div><div class="tx-cat">Cartao'+(atrasado?' <span style="background:rgba(255,107,107,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;">Pago em atraso '+fData(c.faturas[chave])+'</span>':' <span class="badge-pago">Pago '+fData(c.faturas[chave])+'</span>')+'</div></div><div class="tx-right"><div class="tx-valor r">-'+fR(us)+'</div></div></div>';
+  });
+  var totalPagos=pagos.reduce(function(a,t){return a+t.valor;},0);
+  var totalFat=d.cartoes.filter(function(c){return c.faturas&&c.faturas[chave];}).reduce(function(a,c){return a+usadoCC(c,d.transacoes);},0);
+  var total=totalPagos+totalFat;
   var el=document.getElementById('lista-pagos');if(!el)return;
-  if(pagos.length===0){el.innerHTML='<div class="tx-empty">Nenhum pagamento neste mes</div>';}
-  else{el.innerHTML='<div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text2);">'+pagos.length+' lancamentos</span><span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--accent);">'+fR(total)+'</span></div><div class="card">'+pagos.map(txItem).join('')+'</div>';}
+  var itens=fatPagas.concat(pagos.map(txItem));
+  if(itens.length===0){el.innerHTML='<div class="tx-empty">Nenhum pagamento neste mes</div>';}
+  else{el.innerHTML='<div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text2);">'+itens.length+' lancamentos</span><span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--accent);">'+fR(total)+'</span></div><div class="card">'+itens.join('')+'</div>';}
   abM('sh-pagos');
 }
 
+function confirmarFatura(cartaoId){
+  var d=gd(),c=d.cartoes.find(function(x){return x.id===cartaoId;});
+  if(!c)return;
+  var us=usadoCC(c,d.transacoes);
+  pagTxId='fat-'+cartaoId;
+  var el=document.getElementById('pag-info');
+  if(el)el.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:4px;">Fatura '+(c.nome||banco(c.banco).nome)+'</div><div style="font-size:13px;color:var(--red);">'+fR(us)+'</div><div style="font-size:11px;color:var(--text2);margin-top:4px;">Vence dia '+c.diaVence+'</div>';
+  var el2=document.getElementById('pag-data');if(el2)el2.value=new Date().toISOString().split('T')[0];
+  fcM('sh-apagar');abM('sh-pag');
+}
+
+function confirmarFaturaExec(data){
+  var cartaoId=pagTxId.replace('fat-','');
+  var d=gd(),c=d.cartoes.find(function(x){return x.id===cartaoId;});
+  if(!c)return;
+  if(!c.faturas)c.faturas={};
+  var chave=mes+'-'+ano;
+  c.faturas[chave]=data;
+  var dv=parseInt(c.diaVence)||10,dtVenc=new Date(ano,mes,dv),dtPago=dataD(data);
+  if(dtPago>dtVenc){if(!c.faturasAtraso)c.faturasAtraso={};c.faturasAtraso[chave]=true;}
+  save(d);fcM('sh-pag');
+  var atrasado=c.faturasAtraso&&c.faturasAtraso[chave];
+  toast(atrasado?'Fatura paga em atraso!':'Fatura paga',atrasado?'warn':'ok');
+  renderPag();
+}
+
 function abreAPagar(){
-  var d=gd(),fps=aPagar(d.transacoes),total=fps.reduce(function(a,t){return a+t.valor;},0);
+  var d=gd(),fps=aPagar(d.transacoes);
+  var faturas=faturasPendentes(d.cartoes,d.transacoes);
   var el=document.getElementById('lista-apagar');if(!el)return;
   el.innerHTML='';
-  if(fps.length===0){el.innerHTML='<div class="tx-empty">Nenhuma conta pendente</div>';abM('sh-apagar');return;}
-  var hj=hoje0();
-  var atrasadas=[],deHoje=[],futuras=[];
-  fps.forEach(function(t){var dt=dataD(t.data),diff=Math.round((dt-hj)/(1000*60*60*24));if(diff<0)atrasadas.push(t);else if(diff===0)deHoje.push(t);else futuras.push(t);});
-  atrasadas.sort(function(a,b){return new Date(a.data)-new Date(b.data);});
-  futuras.sort(function(a,b){return new Date(a.data)-new Date(b.data);});
+  if(fps.length===0&&faturas.length===0){el.innerHTML='<div class="tx-empty">Nenhuma conta pendente</div>';abM('sh-apagar');return;}
+  var hj=hoje0(),atrasadas=[],deHoje=[],futuras=[];
+  fps.forEach(function(t){var dt=dataD(t.data),diff=Math.round((dt-hj)/(1000*60*60*24));if(diff<0)atrasadas.push({tipo:'tx',t:t,diff:diff});else if(diff===0)deHoje.push({tipo:'tx',t:t,diff:0});else futuras.push({tipo:'tx',t:t,diff:diff});});
+  faturas.forEach(function(f){var dt=dataD(f.dataVenc),diff=Math.round((dt-hj)/(1000*60*60*24));if(diff<0)atrasadas.push({tipo:'fat',f:f,diff:diff});else if(diff===0)deHoje.push({tipo:'fat',f:f,diff:0});else futuras.push({tipo:'fat',f:f,diff:diff});});
+  atrasadas.sort(function(a,b){return a.diff-b.diff;});
+  futuras.sort(function(a,b){return a.diff-b.diff;});
 
-  function mkGrupo(lista,titulo,cor,icone){
-    if(!lista.length)return;
-    var total2=lista.reduce(function(a,t){return a+t.valor;},0);
-    var sec=document.createElement('div');sec.style.marginBottom='14px';
-    var hdr=document.createElement('div');
-    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';
-    hdr.innerHTML='<div style="display:flex;align-items:center;gap:7px;"><span>'+icone+'</span><span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+'</span><span style="font-size:11px;color:var(--text2);">'+lista.length+' item(s)</span></div><span style="font-family:var(--font-h);font-size:13px;font-weight:800;color:'+cor+';">'+fR(total2)+'</span>';
-    sec.appendChild(hdr);
-    var card=document.createElement('div');card.className='card';card.style.padding='0';
-    lista.forEach(function(t){
-      var cat=getCat(t.cat),dt=dataD(t.data),diffD=Math.round((dt-hj)/(1000*60*60*24));
-      var dataStr=diffD<0?'Atrasado '+Math.abs(diffD)+' dia(s)':diffD===0?'Hoje':dt.getDate()+'/'+(dt.getMonth()+1);
-      var row=document.createElement('div');row.className='tx-item';row.style.padding='10px 14px';
+  function mkItem(item,cor){
+    var row=document.createElement('div');row.className='tx-item';row.style.padding='10px 14px';
+    if(item.tipo==='tx'){
+      var t=item.t,cat=getCat(t.cat),diff=item.diff;
+      var dataStr=diff<0?'Atrasado '+Math.abs(diff)+' dia(s)':diff===0?'Hoje':fData(t.data);
       var ic=document.createElement('div');ic.className='tx-icone';ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;
       var info=document.createElement('div');info.className='tx-info';info.innerHTML='<div class="tx-nome">'+t.desc+(t.parcTotal?' ('+t.parcAtual+'/'+t.parcTotal+')':'')+'</div><div class="tx-cat">'+cat.nome+(t.fixo==='fixo'?' Fixo':'')+'</div>';
       var right=document.createElement('div');right.className='tx-right';
       var val=document.createElement('div');val.className='tx-valor r';val.textContent='-'+fR(t.valor);
       var dtel=document.createElement('div');dtel.className='tx-data';dtel.style.color=cor;dtel.textContent=dataStr;
       var bw=document.createElement('div');bw.style.marginTop='4px';
-      var btn=document.createElement('button');btn.textContent='Pagar';
-      btn.style.cssText='font-size:10px;font-weight:700;color:#000;background:'+cor+';border-radius:6px;padding:3px 8px;cursor:pointer;';
+      var btn=document.createElement('button');btn.textContent='Pagar';btn.style.cssText='font-size:10px;font-weight:700;color:#000;background:'+cor+';border-radius:6px;padding:3px 8px;cursor:pointer;';
       btn.onclick=(function(tid){return function(){fcM('sh-apagar');abrePagTx(tid);};})(t.id);
       bw.appendChild(btn);right.appendChild(val);right.appendChild(dtel);right.appendChild(bw);
-      row.appendChild(ic);row.appendChild(info);row.appendChild(right);card.appendChild(row);
-    });
+      row.appendChild(ic);row.appendChild(info);row.appendChild(right);
+    } else {
+      var f=item.f,diff2=item.diff;
+      var cc=d.cartoes.find(function(x){return x.id===f.cartaoId;})||{};
+      var b=banco(cc.banco||'outro');
+      var dataStr2=diff2<0?'Atrasado '+Math.abs(diff2)+' dia(s)':diff2===0?'Hoje':'Vence '+fData(f.dataVenc);
+      var ic2=document.createElement('div');ic2.className='tx-icone';ic2.style.cssText='background:'+b.cor+'22;color:'+b.cor;ic2.innerHTML='&#x1F4B3;';
+      var info2=document.createElement('div');info2.className='tx-info';info2.innerHTML='<div class="tx-nome">Fatura '+f.cartaoNome+'</div><div class="tx-cat">Cartao de credito</div>';
+      var right2=document.createElement('div');right2.className='tx-right';
+      var val2=document.createElement('div');val2.className='tx-valor r';val2.textContent='-'+fR(f.valor);
+      var dtel2=document.createElement('div');dtel2.className='tx-data';dtel2.style.color=cor;dtel2.textContent=dataStr2;
+      var bw2=document.createElement('div');bw2.style.marginTop='4px';
+      var btn2=document.createElement('button');btn2.textContent='Pagar';btn2.style.cssText='font-size:10px;font-weight:700;color:#000;background:'+cor+';border-radius:6px;padding:3px 8px;cursor:pointer;';
+      btn2.onclick=(function(cid){return function(){confirmarFatura(cid);};})(f.cartaoId);
+      bw2.appendChild(btn2);right2.appendChild(val2);right2.appendChild(dtel2);right2.appendChild(bw2);
+      row.appendChild(ic2);row.appendChild(info2);row.appendChild(right2);
+    }
+    return row;
+  }
+
+  function mkGrupo(lista,titulo,cor,icone){
+    if(!lista.length)return;
+    var total2=lista.reduce(function(a,item){return a+(item.tipo==='tx'?item.t.valor:item.f.valor);},0);
+    var sec=document.createElement('div');sec.style.marginBottom='14px';
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';
+    hdr.innerHTML='<div style="display:flex;align-items:center;gap:7px;"><span>'+icone+'</span><span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+'</span><span style="font-size:11px;color:var(--text2);">'+lista.length+' item(s)</span></div><span style="font-family:var(--font-h);font-size:13px;font-weight:800;color:'+cor+';">'+fR(total2)+'</span>';
+    sec.appendChild(hdr);
+    var card=document.createElement('div');card.className='card';card.style.padding='0';
+    lista.forEach(function(item){card.appendChild(mkItem(item,cor));});
     sec.appendChild(card);el.appendChild(sec);
   }
   mkGrupo(atrasadas,'Atrasadas','#ff6b6b','&#128308;');
