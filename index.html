@@ -59,14 +59,14 @@
    <button id="btn-rec" class="tbtn" onclick="setTipo('receita')">Receita</button>
   </div>
   <div class="fg"><label class="flabel">Descricao</label><input class="finput" id="tx-desc" type="text" placeholder="Ex: Supermercado"></div>
-  <div class="fg"><label class="flabel">Valor (R$)</label><input class="finput" id="tx-valor" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
+  <div class="fg"><label class="flabel" id="lbl-valor">Valor (R$)</label><input class="finput" id="tx-valor" type="tel" placeholder="0,00" oninput="mask(this)" autocomplete="off"></div>
   <div class="frow">
    <div class="fg"><label class="flabel">Data</label><input class="finput" id="tx-data" type="date"></div>
    <div class="fg"><label class="flabel">Tipo</label><select class="finput" id="tx-fixo"><option value="variavel">Variavel</option><option value="fixo">Fixo mensal</option></select></div>
   </div>
   <div class="fg"><label class="flabel">Conta / Cartao</label><select class="finput" id="tx-conta"></select></div>
   <div class="fg" id="gr-parc" style="display:none">
-   <label class="flabel">Parcelamento</label>
+   <label class="flabel">Parcelamento (informe valor total acima)</label>
    <div class="frow">
     <input class="finput" id="tx-pt" type="number" min="1" max="60" placeholder="Total parcelas" oninput="prevParc()">
     <input class="finput" id="tx-pa" type="number" min="1" placeholder="Parcela atual" oninput="prevParc()">
