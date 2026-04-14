@@ -461,7 +461,7 @@ function rCartoesList(d){
     var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
     var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
 
-    h+='<div class="card" style="margin-bottom:10px;cursor:pointer;'+borda+'" onclick="selCartao('+i+')">';
+    h+='<div class="card" style="margin-bottom:10px;'+borda+'">';
     // Topo: nome + banco + vencimento
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h+='<div style="display:flex;align-items:center;gap:10px;">';
@@ -479,6 +479,7 @@ function rCartoesList(d){
     // Barra
     h+='<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:3px;"></div></div>';
     h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);"><span>'+pct.toFixed(0)+'% comprometido</span><span>Limite: '+fRs(c.limite)+'</span></div>';
+    h+='<button onclick="selCartao('+i+')" style="width:100%;margin-top:12px;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rsm);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;">Ver detalhes &#8250;</button>';
     h+='</div>';
   });
 
