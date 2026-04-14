@@ -461,7 +461,7 @@ function rCartoesList(d){
     var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
     var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
 
-    h+='<div class="card" style="margin-bottom:10px;cursor:pointer;'+borda+'" onclick="ccIdx='+i+';renderPag()">';
+    h+='<div class="card" style="margin-bottom:10px;cursor:pointer;'+borda+'" onclick="selCartao('+i+')">';
     // Topo: nome + banco + vencimento
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h+='<div style="display:flex;align-items:center;gap:10px;">';
@@ -526,6 +526,7 @@ function rCartaoDetalhe(d){
   h+=buildLancamentosCC(c,d.transacoes);
   return h;
 }
+function selCartao(i){ccIdx=i;renderPag();}
 function delCC(i){if(!confirm('Excluir cartao?'))return;var d=gd();d.cartoes.splice(i,1);save(d);ccIdx=-1;toast('Cartao excluido','ok');renderPag();}
 
 //  RENDER METAS 
