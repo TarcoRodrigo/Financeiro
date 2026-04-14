@@ -174,8 +174,12 @@ function txItem(t){
   var badge='';
   if(t.tipo==='despesa'&&!t.cartaoId){
     var chave=mes+'-'+ano,pg=t.pagamentos&&t.pagamentos[chave];
-    if(pg)badge='<span class="badge-pago">Pago '+fData(pg)+'</span>';
-    else if(dataD(t.data)>hoje0())badge='<span class="badge-pend">Pendente</span>';
+    if(pg){
+      var atrasado=(t.atrasos&&t.atrasos[chave])||dataD(pg)>dataD(t.data);
+      badge=atrasado
+        ?'<span style="background:rgba(255,107,107,.15);color:var(--red);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;">Pago em atraso '+fData(pg)+'</span>'
+        :'<span class="badge-pago">Pago '+fData(pg)+'</span>';
+    } else if(dataD(t.data)>hoje0())badge='<span class="badge-pend">Pendente</span>';
   }
   var foto=t.foto?'<span style="color:var(--blue);margin-left:4px;">&#128247;</span>':'';
   return '<div class="tx-item" onclick="abreEditTx(\''+t.id+'\')">'
