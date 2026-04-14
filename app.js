@@ -52,7 +52,7 @@ var MC=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 //  ESTADO 
 var pag='inicio',mes=new Date().getMonth(),ano=new Date().getFullYear();
 var tipoTx='despesa',doCC=false,bcSel=null,bkSel=null,catSel='',orcCatSel='';
-var ccIdx=0,aporteIdx=-1,catTipo='gasto',filTx='todos',editTxId=null,pagTxId=null;
+var ccIdx=-1,aporteIdx=-1,catTipo='gasto',filTx='todos',editTxId=null,pagTxId=null;
 var fotoB64=null,privado=false,buscaQ='';
 
 //  STORAGE 
@@ -175,6 +175,7 @@ function aplicaRecorrentes(){
 //  NAV 
 function nav(p){
   pag=p;buscaQ='';
+  if(p!=='cartoes')ccIdx=-1;
   document.querySelectorAll('.ni').forEach(function(b){b.classList.toggle('active',b.dataset.p===p);});
   var f=document.getElementById('fab-p');if(f)f.remove();
   document.getElementById('conteudo').scrollTop=0;
@@ -430,231 +431,102 @@ function setBusca(v){buscaQ=v;renderPag();}
 function rCartoes(){
   var d=gd();
 
-  // Cards scroll topo
-  var h='<div class="hscroll">';
-  d.cartoes.forEach(function(c,i){
-    var b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes);
-    var disp=c.limite-comp,pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0;
-    var bc=pct>85?'#ff6b6b':pct>60?'#fbbf24':'#00e5a0';
-    var hoje=new Date(),dv=parseInt(c.diaVence)||10;
-    var venc=new Date(hoje.getFullYear(),hoje.getMonth(),dv);
-    if(venc<hoje)venc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dv);
-    var diff=Math.ceil((venc-hoje)/(1000*60*60*24));
-    var alertaBorda=diff<=5?'outline:2px solid #ff6b6b;':'';
-    var vencStr=diff===0?'Hoje!':diff===1?'Amanha!':diff<=5?'Em '+diff+' dias':'Dia '+c.diaVence;
-    var vencCor=diff<=5?'#ff6b6b':'rgba(255,255,255,.6)';
-    var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
-    var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
-    h+='<div class="cc-card" style="background:linear-gradient(145deg,'+b.cor+'cc,'+b.cor+'88);'+alertaBorda+'" onclick="ccIdx='+i+';nav(\"cartoes\")">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
-    h+='<div style="font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;">'+(c.nome||b.nome)+'</div>';
-    h+='<div style="font-size:9px;color:'+vencCor+';font-weight:600;">Venc. '+vencStr+'</div></div>';
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:8px;">';
-    h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;"><div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Fatura</div><div style="font-size:11px;font-weight:700;color:#ff6b6b;">'+fRs(us)+'</div></div>';
-    h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;"><div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Parcelas</div><div style="font-size:11px;font-weight:700;color:#fbbf24;">'+fRs(totParc)+'</div></div>';
-    h+='<div style="background:rgba(0,0,0,.25);border-radius:6px;padding:5px;text-align:center;"><div style="font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px;">Disponivel</div><div style="font-size:11px;font-weight:700;color:#00e5a0;">'+fRs(disp)+'</div></div>';
-    h+='</div>';
-    h+='<div style="height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;">';
-    h+='<div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:2px;"></div></div>';
-    h+='<div style="display:flex;justify-content:space-between;margin-top:3px;">';
-    h+='<span style="font-size:9px;color:rgba(255,255,255,.4);">'+pct.toFixed(0)+'% comprometido</span>';
-    h+='<span style="font-size:9px;color:rgba(255,255,255,.4);">Limite: '+fRs(c.limite)+'</span>';
-    h+='</div></div>';
-  });
-  h+='<div class="ac-card add" onclick="abM(\"sh-cartao\")">+ Cartao</div></div>';
+  // Se ccIdx == -1 mostra lista, senao mostra detalhe
+  if(ccIdx===-1){
+    return rCartoesList(d);
+  } else {
+    return rCartaoDetalhe(d);
+  }
+}
+
+function rCartoesList(d){
+  var hoje=new Date();
+  var h='<div style="font-family:var(--font-h);font-size:18px;font-weight:800;margin-bottom:14px;">Meus Cartoes</div>';
 
   if(d.cartoes.length===0){
-    h+='<div class="card" style="text-align:center;padding:36px"><div style="font-size:36px;margin-bottom:10px">&#x1F4B3;</div><div style="color:var(--text2);margin-bottom:14px">Nenhum cartao cadastrado</div><button class="sbtn" onclick="abM(\"sh-cartao\")">Adicionar Cartao</button></div>';
+    h+='<div class="card" style="text-align:center;padding:36px;"><div style="font-size:40px;margin-bottom:12px;">&#x1F4B3;</div><div style="color:var(--text2);margin-bottom:16px;">Nenhum cartao cadastrado</div><button class="sbtn" onclick="abM(\"sh-cartao\")">Adicionar Cartao</button></div>';
     return h;
   }
 
-  var c=d.cartoes[ccIdx]||d.cartoes[0];
-  var b=banco(c.banco);
-  var us=usadoCC(c,d.transacoes);
-  var comp=comprometidoCC(c,d.transacoes);
-  var disp=c.limite-comp;
-  var pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0;
-  var bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
+  d.cartoes.forEach(function(c,i){
+    var b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp;
+    var pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0;
+    var bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
+    var dv=parseInt(c.diaVence)||10,venc=new Date(hoje.getFullYear(),hoje.getMonth(),dv);
+    if(venc<hoje)venc=new Date(hoje.getFullYear(),hoje.getMonth()+1,dv);
+    var diff=Math.ceil((venc-hoje)/(1000*60*60*24));
+    var vencStr=diff===0?'Vence hoje!':diff===1?'Vence amanha!':diff<=5?'Vence em '+diff+' dias':'Vence dia '+c.diaVence;
+    var vencCor=diff<=5?'var(--red)':'var(--text2)';
+    var borda=diff<=5?'border-color:rgba(255,107,107,.4);':'';
+    var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;});
+    var totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);
 
-  // Header do cartao selecionado
-  h+='<div style="background:linear-gradient(145deg,'+b.cor+'dd,'+b.cor+'88);border-radius:var(--r);padding:16px;margin-bottom:10px;">';
-  h+='<div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:#fff;margin-bottom:2px;">'+(c.nome||b.nome)+'</div>';
-  h+='<div style="color:rgba(255,255,255,.5);font-size:11px;margin-bottom:12px;">'+(c.bandeira||'')+' - Fecha dia '+(c.diaFecha||'?')+' - Vence dia '+(c.diaVence||'?')+'</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
-  h+='<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;"><div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Limite Total</div><div style="font-family:var(--font-h);font-size:16px;font-weight:700;color:#fff;">'+fR(c.limite)+'</div></div>';
-  h+='<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;"><div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Disponivel Real</div><div style="font-family:var(--font-h);font-size:16px;font-weight:700;color:'+(disp>0?'#00e5a0':'#ff6b6b')+'">'+fR(disp)+'</div></div>';
-  h+='<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;"><div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Fatura Atual</div><div style="font-family:var(--font-h);font-size:16px;font-weight:700;color:#ff6b6b;">'+fR(us)+'</div></div>';
-  h+='<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;"><div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Parcelas Futuras</div><div style="font-family:var(--font-h);font-size:16px;font-weight:700;color:#fbbf24;">'+fR(comp-us)+'</div></div>';
-  h+='</div>';
-  h+='<div style="height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:5px;">';
-  h+='<div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:3px;"></div></div>';
-  h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.45);">';
-  h+='<span>'+pct.toFixed(0)+'% do limite comprometido</span><span>Livre: '+fR(disp)+'</span></div></div>';
+    h+='<div class="card" style="margin-bottom:10px;cursor:pointer;'+borda+'" onclick="ccIdx='+i+';renderPag()">';
+    // Topo: nome + banco + vencimento
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    h+='<div style="display:flex;align-items:center;gap:10px;">';
+    h+='<div style="width:40px;height:40px;border-radius:10px;background:'+b.cor+';display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:14px;font-weight:800;color:'+b.txt+';">'+b.sigla+'</div>';
+    h+='<div><div style="font-size:14px;font-weight:700;">'+(c.nome||b.nome)+'</div><div style="font-size:11px;color:var(--text2);">'+(c.bandeira||b.nome)+' - Fecha dia '+(c.diaFecha||'?')+'</div></div>';
+    h+='</div>';
+    h+='<div style="text-align:right;"><div style="font-size:11px;font-weight:600;color:'+vencCor+';">'+vencStr+'</div><div style="font-size:10px;color:var(--text2);">&#8250;</div></div>';
+    h+='</div>';
+    // 3 valores
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">';
+    h+='<div style="text-align:center;"><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Fatura</div><div style="font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--red);">'+fRs(us)+'</div></div>';
+    h+='<div style="text-align:center;"><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Parcelas</div><div style="font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--yellow);">'+fRs(totParc)+'</div></div>';
+    h+='<div style="text-align:center;"><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Disponivel</div><div style="font-family:var(--font-h);font-size:14px;font-weight:800;color:'+( disp>0?'var(--accent)':'var(--red)')+';">'+fRs(disp)+'</div></div>';
+    h+='</div>';
+    // Barra
+    h+='<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:3px;"></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);"><span>'+pct.toFixed(0)+'% comprometido</span><span>Limite: '+fRs(c.limite)+'</span></div>';
+    h+='</div>';
+  });
 
-  // Botoes acao
-  h+='<div style="display:flex;gap:8px;margin-bottom:14px;">';
-  h+='<button class="sbtn" style="flex:1;padding:12px;font-size:13px;margin:0" onclick="abTxCC()">+ Lancar</button>';
-  h+='<button style="flex:0.5;padding:12px;background:rgba(255,107,107,.15);color:var(--red);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;" onclick="delCC('+ccIdx+')">Excluir</button>';
-  h+='</div>';
-
-  // Grafico por mes - 6 passados + atual + futuros ate ultima parcela
-  h+=buildGraficoCC(c, d.transacoes);
-
-  // Lancamentos do mes selecionado no grafico
-  h+=buildLancamentosCC(c, d.transacoes);
-
+  h+='<button class="sbtn" onclick="abM(\"sh-cartao\")" style="margin-top:4px;">+ Adicionar Cartao</button>';
   return h;
 }
 
-// Mes selecionado no grafico do cartao
-var ccMesSel = {m: new Date().getMonth(), a: new Date().getFullYear()};
+function rCartaoDetalhe(d){
+  if(!d.cartoes[ccIdx]){ccIdx=-1;return rCartoesList(d);}
+  var c=d.cartoes[ccIdx],b=banco(c.banco),hoje=new Date();
+  var us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp;
+  var pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';
 
-function buildGraficoCC(c, txs){
-  var hoje=new Date();
-
-  // Calcular range de meses: 6 passados + atual + futuros ate ultima parcela
-  var meses=[];
-  // 6 meses passados
-  for(var i=6;i>=1;i--){
-    var mm=hoje.getMonth()-i,aa=hoje.getFullYear();
-    if(mm<0){mm+=12;aa--;}
-    meses.push({m:mm,a:aa});
-  }
-  // Mes atual
-  meses.push({m:hoje.getMonth(),a:hoje.getFullYear()});
-
-  // Meses futuros com parcelas ativas
-  var ultimaParcela=null;
-  txs.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;}).forEach(function(t){
-    // Calcular mes da ultima parcela
-    var mesesRestantes=t.parcTotal-t.parcAtual;
-    var mFut=hoje.getMonth()+mesesRestantes,aFut=hoje.getFullYear();
-    while(mFut>11){mFut-=12;aFut++;}
-    var dt={m:mFut,a:aFut};
-    if(!ultimaParcela||(aFut>ultimaParcela.a||(aFut===ultimaParcela.a&&mFut>ultimaParcela.m))){
-      ultimaParcela=dt;
-    }
-  });
-
-  if(ultimaParcela){
-    var mm=hoje.getMonth()+1,aa=hoje.getFullYear();
-    if(mm>11){mm=0;aa++;}
-    while(aa<ultimaParcela.a||(aa===ultimaParcela.a&&mm<=ultimaParcela.m)){
-      meses.push({m:mm,a:aa});
-      mm++;if(mm>11){mm=0;aa++;}
-    }
-  }
-
-  // Calcular valor por mes
-  var MXV=1;
-  var dadosMes=meses.map(function(md){
-    var val=txs.filter(function(t){
-      if(!t.cartaoId||t.cartaoId!==c.id)return false;
-      var d=new Date(t.data+'T12:00:00');
-      if(d.getMonth()===md.m&&d.getFullYear()===md.a)return true;
-      // Parcelas futuras: contar nos meses futuros
-      if(t.parcTotal&&t.parcAtual<t.parcTotal){
-        var mLanc=d.getMonth(),aLanc=d.getFullYear();
-        var diffMeses=(md.a-aLanc)*12+(md.m-mLanc);
-        if(diffMeses>0&&diffMeses<=(t.parcTotal-t.parcAtual))return true;
-      }
-      return false;
-    }).reduce(function(a,t){return a+t.valor;},0);
-    if(val>MXV)MXV=val;
-    return{m:md.m,a:md.a,val:val};
-  });
-
-  var isSel=function(md){return md.m===ccMesSel.m&&md.a===ccMesSel.a;};
-  var isAtual=function(md){return md.m===hoje.getMonth()&&md.a===hoje.getFullYear();};
-  var isFuturo=function(md){return md.a>hoje.getFullYear()||(md.a===hoje.getFullYear()&&md.m>hoje.getMonth());};
-
-  var h='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Historico por Mes</div>';
-  h+='<div class="card" style="padding:14px;">';
-
-  // Barra grafico
-  var barW=Math.max(36, Math.floor(280/Math.max(dadosMes.length,1)));
-  h+='<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;align-items:flex-end;height:100px;">';
-  dadosMes.forEach(function(md){
-    var barH=MXV>0?Math.max(4,Math.round((md.val/MXV)*80)):4;
-    var cor=isSel(md)?'#fff':isAtual(md)?'#00e5a0':isFuturo(md)?'#fbbf24':'#38bdf8';
-    var opacity=isSel(md)?'1':isAtual(md)?'1':isFuturo(md)?'0.7':'0.5';
-    var mm=md.m,aa=md.a;
-    h+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex-shrink:0;width:'+barW+'px;" onclick="ccMesSel={m:'+mm+',a:'+aa+'};nav(\'cartoes\')">';
-    h+='<div style="font-size:9px;color:var(--text2);white-space:nowrap;">'+fRs(md.val)+'</div>';
-    h+='<div style="height:'+barH+'px;width:'+(barW-8)+'px;background:'+cor+';opacity:'+opacity+';border-radius:3px 3px 0 0;'+(isSel(md)?'box-shadow:0 0 8px '+cor+';':'')+'"></div>';
-    h+='<div style="font-size:8px;color:'+(isSel(md)?'#fff':isAtual(md)?'#00e5a0':isFuturo(md)?'#fbbf24':'var(--text3)')+';white-space:nowrap;">'+MC[mm]+'/'+(aa.toString().slice(2))+'</div>';
-    h+='</div>';
-  });
-  h+='</div>';
-
-  // Legenda
-  h+='<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">';
-  h+='<div style="display:flex;align-items:center;gap:4px;font-size:10px;"><div style="width:10px;height:10px;border-radius:2px;background:#38bdf8;opacity:.5;"></div>Passado</div>';
-  h+='<div style="display:flex;align-items:center;gap:4px;font-size:10px;"><div style="width:10px;height:10px;border-radius:2px;background:#00e5a0;"></div>Atual</div>';
-  h+='<div style="display:flex;align-items:center;gap:4px;font-size:10px;"><div style="width:10px;height:10px;border-radius:2px;background:#fbbf24;"></div>Futuro (parcelas)</div>';
+  // Header com botao voltar
+  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+  h+='<button onclick="ccIdx=-1;renderPag()" style="width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8592;</button>';
+  h+='<div style="display:flex;align-items:center;gap:10px;flex:1;">';
+  h+='<div style="width:40px;height:40px;border-radius:10px;background:'+b.cor+';display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:14px;font-weight:800;color:'+b.txt+';">'+b.sigla+'</div>';
+  h+='<div><div style="font-size:16px;font-weight:700;">'+(c.nome||b.nome)+'</div><div style="font-size:11px;color:var(--text2);">'+(c.bandeira||b.nome)+' - Fecha dia '+(c.diaFecha||'?')+' - Vence dia '+(c.diaVence||'?')+'</div></div>';
   h+='</div></div>';
 
-  return h;
-}
-
-function buildLancamentosCC(c, txs){
-  var mm=ccMesSel.m,aa=ccMesSel.a;
-  var hoje=new Date();
-  var isFuturo=aa>hoje.getFullYear()||(aa===hoje.getFullYear()&&mm>hoje.getMonth());
-  var label=MC[mm]+' '+aa;
-
-  // Lancamentos diretos do mes no cartao
-  var diretos=txs.filter(function(t){
-    if(!t.cartaoId||t.cartaoId!==c.id)return false;
-    var d=new Date(t.data+'T12:00:00');
-    return d.getMonth()===mm&&d.getFullYear()===aa;
-  });
-
-  // Parcelas de outros meses que caem neste mes
-  var parcelas=[];
-  if(isFuturo){
-    txs.filter(function(t){
-      if(!t.cartaoId||t.cartaoId!==c.id||!t.parcTotal)return false;
-      var d=new Date(t.data+'T12:00:00');
-      var mLanc=d.getMonth(),aLanc=d.getFullYear();
-      var diffMeses=(aa-aLanc)*12+(mm-mLanc);
-      return diffMeses>0&&diffMeses<=(t.parcTotal-t.parcAtual);
-    }).forEach(function(t){
-      var d=new Date(t.data+'T12:00:00');
-      var diffMeses=(aa-d.getFullYear())*12+(mm-d.getMonth());
-      var numParc=t.parcAtual+diffMeses;
-      parcelas.push({t:t,numParc:numParc});
-    });
-  }
-
-  var total=(diretos.reduce(function(a,t){return a+t.valor;},0))+(parcelas.reduce(function(a,p){return a+p.t.valor;},0));
-
-  var h='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px;">'+label+(isFuturo?' (Projetado)':'')+'</div>';
-  h+='<div class="card">';
-
-  if(diretos.length===0&&parcelas.length===0){
-    h+='<div class="tx-empty">Nenhum lancamento em '+label+'</div>';
-  } else {
-    diretos.sort(function(a,b){return new Date(b.data)-new Date(a.data);}).forEach(function(t){
-      h+=txItem(t);
-    });
-    parcelas.forEach(function(p){
-      var t=p.t,cat=getCat(t.cat);
-      h+='<div class="tx-item">';
-      h+='<div class="tx-icone" style="background:'+cat.cor+'22;color:'+cat.cor+'">'+cat.ic+'</div>';
-      h+='<div class="tx-info"><div class="tx-nome">'+t.desc+'</div>';
-      h+='<div class="tx-cat">'+cat.nome+' <span class="badge-pend">Parcela '+p.numParc+'/'+t.parcTotal+'</span></div></div>';
-      h+='<div class="tx-right"><div class="tx-valor">-'+fR(t.valor)+'</div><div class="tx-data">Previsto</div></div>';
-      h+='</div>';
-    });
-    h+='<div style="display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;">';
-    h+='<span style="font-size:13px;font-weight:700;font-family:var(--font-h);color:var(--red);">Total: '+fR(total)+'</span>';
-    h+='</div>';
-  }
+  // 4 boxes info
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+  h+='<div class="sbox"><div class="slabel">Limite Total</div><div class="sval">'+fR(c.limite)+'</div></div>';
+  h+='<div class="sbox"><div class="slabel">Disponivel Real</div><div class="sval '+(disp>0?'g':'r')+'">'+fR(disp)+'</div></div>';
+  h+='<div class="sbox"><div class="slabel">Fatura Atual</div><div class="sval r">'+fR(us)+'</div></div>';
+  h+='<div class="sbox"><div class="slabel">Parcelas Futuras</div><div class="sval y">'+fR(comp-us)+'</div></div>';
   h+='</div>';
+
+  // Barra limite
+  h+='<div class="card" style="margin-bottom:12px;">';
+  h+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px;"><span>Comprometido: '+fR(comp)+'</span><span>Limite: '+fR(c.limite)+'</span></div>';
+  h+='<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+bc+';border-radius:4px;"></div></div>';
+  h+='<div style="font-size:10px;color:'+bc+';margin-top:4px;text-align:right;">'+pct.toFixed(0)+'% do limite comprometido</div>';
+  h+='</div>';
+
+  // Botoes
+  h+='<div style="display:flex;gap:8px;margin-bottom:14px;">';
+  h+='<button class="sbtn" style="flex:1;padding:12px;font-size:13px;margin:0;" onclick="abTxCC()">+ Lancar no Cartao</button>';
+  h+='<button style="flex:0.4;padding:12px;background:rgba(255,107,107,.15);color:var(--red);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;" onclick="delCC('+ccIdx+')">Excluir</button>';
+  h+='</div>';
+
+  // Grafico + lancamentos
+  h+=buildGraficoCC(c,d.transacoes);
+  h+=buildLancamentosCC(c,d.transacoes);
   return h;
 }
-function delCC(i){if(!confirm('Excluir cartao?'))return;var d=gd();d.cartoes.splice(i,1);save(d);ccIdx=0;toast('Cartao excluido','ok');renderPag();}
+function delCC(i){if(!confirm('Excluir cartao?'))return;var d=gd();d.cartoes.splice(i,1);save(d);ccIdx=-1;toast('Cartao excluido','ok');renderPag();}
 
 //  RENDER METAS 
 function rMetas(){
@@ -944,7 +816,7 @@ function prevFoto(input){
   };
   reader.readAsDataURL(file);
 }
-function abTxCC(){var d=gd(),c=d.cartoes[ccIdx];abTx('despesa',true);if(c)setTimeout(function(){var s=document.getElementById('tx-conta');if(!s)return;for(var i=0;i<s.options.length;i++){if(s.options[i].value==='cartao:'+c.id){s.selectedIndex=i;break;}}},50);}
+function abTxCC(){var d=gd(),c=ccIdx>=0?d.cartoes[ccIdx]:null;abTx('despesa',true);if(c)setTimeout(function(){var s=document.getElementById('tx-conta');if(!s)return;for(var i=0;i<s.options.length;i++){if(s.options[i].value==='cartao:'+c.id){s.selectedIndex=i;break;}}},50);}
 
 function abreEditTx(id){
   var d=gd(),t=d.transacoes.find(function(x){return x.id===id;});if(!t)return;
