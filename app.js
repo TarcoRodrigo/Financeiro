@@ -184,8 +184,8 @@ function txItem(t){
 function rInicio(){
   var d=gd(),ts=txMes(d.transacoes),ch=chaveAtual(),hj=hoje0();
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
-  var depPago=ts.filter(function(t){return isPago(t);}).reduce(function(a,t){return a+t.valor;},0);
-  var fpend=aPagar(d.transacoes),depPend=fpend.reduce(function(a,t){return a+t.valor;},0);
+  var depPago=ts.filter(function(t){return isPago(t);}).reduce(function(a,t){return a+t.valor;},0)+d.cartoes.filter(function(c){return c.faturas&&c.faturas[chaveAtual()];}).reduce(function(a,c){return a+usadoCC(c,d.transacoes);},0);
+  var fpend=aPagar(d.transacoes),fatPend=faturasPendentes(d.cartoes,d.transacoes),depPend=fpend.reduce(function(a,t){return a+t.valor;},0)+fatPend.reduce(function(a,f){return a+f.valor;},0),fpendTotal=fpend.length+fatPend.length;
   var tot=d.contas.reduce(function(a,c){return a+(c.saldo||0);},0);
   var ccMesVal=gastosCartaoMes(d.transacoes,d.cartoes);
   var saldoProj=rec-depPago-depPend;
@@ -206,7 +206,7 @@ function rInicio(){
   h+='<div class="hero-bar"><div class="hero-bar-rec" style="width:'+rPct+'%"></div></div>';
   h+='<div class="hero-bar-vals"><span class="g">'+fR(rec)+'</span><span class="r">'+fR(depPago)+'</span></div>';
   h+='<div style="display:flex;gap:8px;margin-top:12px;">';
-  if(depPend>0){h+='<div onclick="abreAPagar()" style="flex:1;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:var(--rsm);padding:8px 12px;cursor:pointer;"><div style="font-size:9px;color:var(--yellow);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">A Pagar &#8250;</div><div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--yellow);">'+fR(depPend)+'</div><div style="font-size:10px;color:var(--text2);">'+fpend.length+' pendentes</div></div>';}
+  if(depPend>0){h+='<div onclick="abreAPagar()" style="flex:1;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:var(--rsm);padding:8px 12px;cursor:pointer;"><div style="font-size:9px;color:var(--yellow);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">A Pagar &#8250;</div><div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--yellow);">'+fR(depPend)+'</div><div style="font-size:10px;color:var(--text2);">'+fpendTotal+' pendentes</div></div>';}
   h+='<div onclick="abrePagos()" style="flex:1;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:var(--rsm);padding:8px 12px;cursor:pointer;"><div style="font-size:9px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Pago &#8250;</div><div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--red);">'+fR(depPago)+'</div><div style="font-size:10px;color:var(--text2);">Projetado: '+fR(saldoProj)+'</div></div>';
   h+='</div>';
   if(ccMesVal>0){h+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;color:var(--text2);">Faturas de cartao neste mes</span><span style="font-size:12px;font-weight:700;color:var(--purple);">'+fR(ccMesVal)+'</span></div>';}
@@ -336,8 +336,8 @@ function delMeta(i){if(!confirm('Excluir meta?'))return;var d=gd();d.metas.splic
 function rRel(){
   var d=gd(),ts=txMes(d.transacoes),ch=chaveAtual(),hj=hoje0();
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
-  var depPago=ts.filter(function(t){return isPago(t);}).reduce(function(a,t){return a+t.valor;},0);
-  var fpend=aPagar(d.transacoes),depPend=fpend.reduce(function(a,t){return a+t.valor;},0);
+  var depPago=ts.filter(function(t){return isPago(t);}).reduce(function(a,t){return a+t.valor;},0)+d.cartoes.filter(function(c){return c.faturas&&c.faturas[chaveAtual()];}).reduce(function(a,c){return a+usadoCC(c,d.transacoes);},0);
+  var fpend=aPagar(d.transacoes),fatPend=faturasPendentes(d.cartoes,d.transacoes),depPend=fpend.reduce(function(a,t){return a+t.valor;},0)+fatPend.reduce(function(a,f){return a+f.valor;},0),fpendTotal=fpend.length+fatPend.length;
   var ccMesVal=gastosCartaoMes(d.transacoes,d.cartoes),depTotal=depPago+depPend+ccMesVal;
   var h='<div style="font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Visao Geral</div>';
   h+='<div class="sgrid"><div class="sbox"><div class="slabel">Receitas</div><div class="sval g">'+fR(rec)+'</div></div><div class="sbox"><div class="slabel">Despesas</div><div class="sval r">'+fR(depTotal)+'</div></div><div class="sbox"><div class="slabel">Saldo Real</div><div class="sval '+(rec-depPago>=0?'g':'r')+'">'+fR(rec-depPago)+'</div><div class="ssub">Apos pagos</div></div><div class="sbox"><div class="slabel">Projetado</div><div class="sval '+(rec-depTotal>=0?'g':'r')+'">'+fR(rec-depTotal)+'</div><div class="ssub">Pagando tudo</div></div></div>';
