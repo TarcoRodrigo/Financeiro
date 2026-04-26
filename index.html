@@ -30,9 +30,12 @@
     </button>
     <button class="ni" data-p="lancamentos" onclick="nav('lancamentos')">
       <div class="ni-ic">&#x1F4CB;</div>
-      <div class="ni-lb">Lancamentos<div class="nav-dot"></div></div>
+      <div class="ni-lb">Lanc.<div class="nav-dot"></div></div>
     </button>
-    <button class="nav-fab" onclick="abTx('despesa',false)">+</button>
+    <button class="ni" data-p="metas" onclick="nav('metas')">
+      <div class="ni-ic">&#x1F3AF;</div>
+      <div class="ni-lb">Metas<div class="nav-dot"></div></div>
+    </button>
     <button class="ni" data-p="cartoes" onclick="nav('cartoes')">
       <div class="ni-ic">&#x1F4B3;</div>
       <div class="ni-lb">Cartoes<div class="nav-dot"></div></div>
@@ -42,6 +45,7 @@
       <div class="ni-lb">Resumo<div class="nav-dot"></div></div>
     </button>
   </nav>
+  <button class="nav-fab" onclick="abTx('despesa',false)">+</button>
 </div>
 <div id="toast" class="toast"></div>
 <div class="sheet-overlay" id="overlay-global" onclick="fcTodos()"></div>
@@ -104,7 +108,7 @@
   <label class="form-label">Data do pagamento</label>
   <input type="date" id="pag-data">
   <div style="height:14px;"></div>
-  <button class="sbtn" onclick="confirmaPag()">Confirmar Pagamento</button>
+  <button class="sbtn" onclick="confirmaPag()">Confirmar</button>
   <button onclick="fcM('sh-pag')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
@@ -174,17 +178,20 @@
 <!-- SHEET META -->
 <div class="sheet" id="sh-meta">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Nova Meta</div>
+  <div class="sheet-title" id="sh-meta-title">Nova Meta</div>
+  <label class="form-label">Categoria</label>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px;" id="meta-cat-grid"></div>
   <label class="form-label">Nome</label>
   <input type="text" id="mt-nome" placeholder="Ex: Reserva de emergencia">
   <label class="form-label">Objetivo (R$)</label>
   <input type="text" id="mt-alvo" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
   <label class="form-label">Valor atual (R$)</label>
   <input type="text" id="mt-atual" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
-  <label class="form-label">Data limite (opcional)</label>
+  <label class="form-label">Data limite</label>
   <input type="date" id="mt-data">
   <div style="height:14px;"></div>
-  <button class="sbtn" onclick="salvaMeta()">Criar Meta</button>
+  <button class="sbtn" id="btn-salva-meta" onclick="salvaMeta()">Criar Meta</button>
+  <button id="btn-del-meta" onclick="deletaMetaEdit()" style="display:none;width:100%;padding:12px;background:rgba(248,113,113,.1);color:var(--red);border:none;border-radius:var(--r);font-size:13px;font-weight:600;margin-top:8px;">Excluir Meta</button>
   <button onclick="fcM('sh-meta')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
@@ -194,9 +201,24 @@
   <div class="sheet-title" id="aporte-title">Aportar</div>
   <label class="form-label">Valor (R$)</label>
   <input type="text" id="aporte-val" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+  <label class="form-label">Conta de origem</label>
+  <select id="aporte-conta"></select>
   <div style="height:14px;"></div>
   <button class="sbtn" onclick="salvaAporte()">Confirmar Aporte</button>
   <button onclick="fcM('sh-aporte')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
+<!-- SHEET RESGATE -->
+<div class="sheet" id="sh-resgate">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="resgate-title">Resgatar</div>
+  <label class="form-label">Valor (R$)</label>
+  <input type="text" id="resgate-val" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+  <label class="form-label">Conta de destino</label>
+  <select id="resgate-conta"></select>
+  <div style="height:14px;"></div>
+  <button class="sbtn" style="background:var(--yellow);color:#000;" onclick="salvaResgate()">Confirmar Resgate</button>
+  <button onclick="fcM('sh-resgate')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
 <!-- SHEET ORC -->
@@ -237,14 +259,14 @@
   </div>
   <div class="drawer-item" onclick="abreNovaConta();fechaDrawer()">&#x1F3E6; Nova conta</div>
   <div class="drawer-item" onclick="abreNovoCartao();fechaDrawer()">&#x1F4B3; Novo cartao</div>
-  <div class="drawer-item" onclick="abM('sh-meta');fechaDrawer()">&#x1F3AF; Nova meta</div>
+  <div class="drawer-item" onclick="abreNovaMeta();fechaDrawer()">&#x1F3AF; Nova meta</div>
   <div class="drawer-item" onclick="abM('sh-orc');fechaDrawer()">&#x1F4B0; Orcamentos</div>
   <div class="drawer-item" onclick="abCats();fechaDrawer()">&#x1F3F7; Categorias</div>
   <div class="drawer-item" onclick="exportaDados();fechaDrawer()">&#x1F4E4; Exportar dados</div>
   <div class="drawer-item" onclick="document.getElementById('imp-input').click()">&#x1F4E5; Importar dados</div>
   <input type="file" id="imp-input" accept=".json" style="display:none" onchange="importaDados(this)">
   <div class="drawer-item" onclick="limpaDados()" style="color:var(--red);">&#x1F5D1; Limpar dados</div>
-  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.2</div>
+  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.3</div>
 </div>
 <script src="app.js"></script>
 </body>
