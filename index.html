@@ -51,7 +51,7 @@
   <div class="sheet-handle"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
     <div class="sheet-title" id="sh-tx-title">Nova Despesa</div>
-    <button id="btn-del-tx" onclick="deletaTx()" style="display:none;background:rgba(248,113,113,.12);color:var(--red);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;">Excluir</button>
+    <button id="btn-del-tx" onclick="deletaTx()" style="display:none;background:rgba(248,113,113,.12);color:var(--red);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;border:none;">Excluir</button>
   </div>
   <div class="tipo-toggle" id="tipo-toggle">
     <button id="btn-desp" class="tbtn ativo-d" onclick="setTipo('despesa')">Despesa</button>
@@ -147,7 +147,7 @@
 <!-- SHEET CARTAO -->
 <div class="sheet" id="sh-cartao">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Novo Cartao</div>
+  <div class="sheet-title" id="sh-cartao-title">Novo Cartao</div>
   <label class="form-label">Banco</label>
   <div class="banco-grid" id="cartao-banco-grid"></div>
   <label class="form-label">Nome (opcional)</label>
@@ -166,7 +166,8 @@
     <div><label class="form-label">Dia vence</label><input type="number" id="cc-vence" placeholder="Ex: 23" min="1" max="31"></div>
   </div>
   <div style="height:14px;"></div>
-  <button class="sbtn" onclick="salvaCartao()">Adicionar Cartao</button>
+  <button class="sbtn" id="btn-salva-cartao" onclick="salvaCartao()">Adicionar Cartao</button>
+  <button id="btn-del-cartao" onclick="deletaCartaoEdit()" style="display:none;width:100%;padding:12px;background:rgba(248,113,113,.1);color:var(--red);border:none;border-radius:var(--r);font-size:13px;font-weight:600;margin-top:8px;">Excluir Cartao</button>
   <button onclick="fcM('sh-cartao')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
@@ -234,8 +235,8 @@
     <span style="font-size:14px;color:var(--text2);">Modo privado</span>
     <input type="checkbox" id="priv-toggle" onchange="setPriv(this.checked)">
   </div>
-  <div class="drawer-item" onclick="abM('sh-conta');fechaDrawer()">&#x1F3E6; Nova conta</div>
-  <div class="drawer-item" onclick="abM('sh-cartao');fechaDrawer()">&#x1F4B3; Novo cartao</div>
+  <div class="drawer-item" onclick="abreNovaConta();fechaDrawer()">&#x1F3E6; Nova conta</div>
+  <div class="drawer-item" onclick="abreNovoCartao();fechaDrawer()">&#x1F4B3; Novo cartao</div>
   <div class="drawer-item" onclick="abM('sh-meta');fechaDrawer()">&#x1F3AF; Nova meta</div>
   <div class="drawer-item" onclick="abM('sh-orc');fechaDrawer()">&#x1F4B0; Orcamentos</div>
   <div class="drawer-item" onclick="abCats();fechaDrawer()">&#x1F3F7; Categorias</div>
@@ -243,7 +244,7 @@
   <div class="drawer-item" onclick="document.getElementById('imp-input').click()">&#x1F4E5; Importar dados</div>
   <input type="file" id="imp-input" accept=".json" style="display:none" onchange="importaDados(this)">
   <div class="drawer-item" onclick="limpaDados()" style="color:var(--red);">&#x1F5D1; Limpar dados</div>
-  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.1</div>
+  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.2</div>
 </div>
 <script src="app.js"></script>
 </body>
