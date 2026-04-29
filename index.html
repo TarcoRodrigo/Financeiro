@@ -383,6 +383,24 @@
   <button onclick="fcM('sh-pag-div')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
+
+<!-- SHEET TRANSFERENCIA -->
+<div class="sheet" id="sh-transf">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Transferencia entre Contas</div>
+  <label class="form-label">Valor (R$)</label>
+  <input type="text" id="transf-val" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+  <label class="form-label">Conta de origem</label>
+  <select id="transf-origem"></select>
+  <label class="form-label">Conta de destino</label>
+  <select id="transf-destino"></select>
+  <label class="form-label">Descricao (opcional)</label>
+  <input type="text" id="transf-obs" placeholder="Ex: Reserva mensal">
+  <div style="height:14px;"></div>
+  <button class="sbtn" style="background:#60a5fa;color:#000;" onclick="salvaTransferencia()">Confirmar Transferencia</button>
+  <button onclick="fcM('sh-transf')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
 <!-- DRAWER -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="fechaDrawer()"></div>
 <div class="drawer" id="drawer">
@@ -395,13 +413,14 @@
   <div class="drawer-item" onclick="abreNovoCartao();fechaDrawer()">&#x1F4B3; Novo cartao</div>
   <div class="drawer-item" onclick="abreNovaMeta();fechaDrawer()">&#x1F3AF; Nova meta</div>
   <div class="drawer-item" onclick="abreNovaDivida();fechaDrawer()">&#x26A0; Nova divida</div>
+  <div class="drawer-item" onclick="abreTransferencia();fechaDrawer()">&#x21C4; Transferencia entre contas</div>
   <div class="drawer-item" onclick="abM('sh-orc');fechaDrawer()">&#x1F4B0; Orcamentos</div>
   <div class="drawer-item" onclick="abCats();fechaDrawer()">&#x1F3F7; Categorias</div>
   <div class="drawer-item" onclick="exportaDados();fechaDrawer()">&#x1F4E4; Exportar dados</div>
   <div class="drawer-item" onclick="document.getElementById('imp-input').click()">&#x1F4E5; Importar dados</div>
   <input type="file" id="imp-input" accept=".json" style="display:none" onchange="importaDados(this)">
   <div class="drawer-item" onclick="limpaDados()" style="color:var(--red);">&#x1F5D1; Limpar dados</div>
-  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.4</div>
+  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.5</div>
 </div>
 <script src="app.js"></script>
 </body>
