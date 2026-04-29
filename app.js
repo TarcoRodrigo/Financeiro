@@ -1,4 +1,4 @@
-// FinanceX v8.3
+// FinanceX v8.4
 'use strict';
 function mask(el){var v=el.value.replace(/\D/g,'');if(!v){el.value='';return;}v=(parseInt(v,10)/100).toFixed(2);el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function pv(id){var el=document.getElementById(id);if(!el)return 0;var v=el.value;if(!v)return 0;return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;}
@@ -14,6 +14,8 @@ var BANCOS=[{id:'nubank',nome:'Nubank',sigla:'Nu',cor:'#820AD1',txt:'#fff'},{id:
 var CATSG=[{id:'alimentacao',nome:'Alimentacao',ic:'&#x1F374;',cor:'#FB923C'},{id:'transporte',nome:'Transporte',ic:'&#x1F697;',cor:'#60A5FA'},{id:'saude',nome:'Saude',ic:'&#x2665;',cor:'#F87171'},{id:'moradia',nome:'Moradia',ic:'&#x1F3E0;',cor:'#FBBF24'},{id:'educacao',nome:'Educacao',ic:'&#x1F4DA;',cor:'#A78BFA'},{id:'lazer',nome:'Lazer',ic:'&#x1F3AE;',cor:'#F472B6'},{id:'vestuario',nome:'Vestuario',ic:'&#x1F455;',cor:'#E879F9'},{id:'supermercado',nome:'Supermercado',ic:'&#x1F6D2;',cor:'#4ADE80'},{id:'contas',nome:'Contas',ic:'&#x1F4A1;',cor:'#FCD34D'},{id:'trabalho',nome:'Trabalho',ic:'&#x1F4BC;',cor:'#60A5FA'},{id:'manutencao',nome:'Manut. carro',ic:'&#x1F527;',cor:'#94A3B8'},{id:'lanches',nome:'Lanches',ic:'&#x1F354;',cor:'#FB923C'},{id:'cartoes',nome:'Cartoes',ic:'&#x1F4B3;',cor:'#A78BFA'},{id:'outros',nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'}];
 var CATSR=[{id:'salario',nome:'Salario',ic:'&#x1F4B5;',cor:'#00E5A0'},{id:'freelance',nome:'Freelance',ic:'&#x1F4BB;',cor:'#38BDF8'},{id:'investimento',nome:'Investimento',ic:'&#x1F4C8;',cor:'#34D399'},{id:'bonus',nome:'Bonus',ic:'&#x1F381;',cor:'#F472B6'},{id:'outros_rec',nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'}];
 var META_CATS=[{id:'emergencia',nome:'Emergencia',ic:'&#x1F6E1;',cor:'#F87171'},{id:'viagem',nome:'Viagem',ic:'&#x2708;',cor:'#38BDF8'},{id:'compra',nome:'Compra',ic:'&#x1F6D2;',cor:'#4ADE80'},{id:'investimento',nome:'Investimento',ic:'&#x1F4C8;',cor:'#34D399'},{id:'outros',nome:'Outros',ic:'&#x1F3AF;',cor:'#A78BFA'}];
+var DIV_CATS=[{id:'cartao',nome:'Cartao',ic:'&#x1F4B3;',cor:'#A78BFA'},{id:'emprestimo',nome:'Emprestimo',ic:'&#x1F3E6;',cor:'#60A5FA'},{id:'financiamento',nome:'Financiamento',ic:'&#x1F3E0;',cor:'#FBBF24'},{id:'conta',nome:'Conta/Servico',ic:'&#x1F4A1;',cor:'#FCD34D'},{id:'pessoal',nome:'Pessoa Fisica',ic:'&#x1F464;',cor:'#4ADE80'},{id:'banco',nome:'Banco',ic:'&#x1F4C8;',cor:'#38BDF8'},{id:'outros',nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'}];
+var DIV_STATUS=[{id:'aberto',nome:'Em aberto',cor:'#F87171'},{id:'negociando',nome:'Em negociacao',cor:'#FBBF24'},{id:'acordo',nome:'Acordo ativo',cor:'#60A5FA'},{id:'quitada',nome:'Quitada',cor:'#4ADE80'}];
 var MN=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MC=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -24,15 +26,18 @@ var editContaId=null,editCartaoId=null,editMetaId=null;
 var fotoB64=null,privado=false,buscaQ='';
 var ccMesSel={m:new Date().getMonth(),a:new Date().getFullYear()};
 var metaPeriodo={};
+var editDividaId=null,divCatSel='outros',divStatusSel='aberto',divFiltro='ativos';
 
 function load(){try{return JSON.parse(localStorage.getItem('fx3')||'{}');}catch(e){return{};}}
 function save(d){try{localStorage.setItem('fx3',JSON.stringify(d));}catch(e){}}
-function gd(){var d=load();if(!d.contas)d.contas=[];if(!d.cartoes)d.cartoes=[];if(!d.transacoes)d.transacoes=[];if(!d.metas)d.metas=[];if(!d.cats_g)d.cats_g=[];if(!d.cats_r)d.cats_r=[];if(!d.orcamentos)d.orcamentos={};return d;}
+function gd(){var d=load();if(!d.contas)d.contas=[];if(!d.cartoes)d.cartoes=[];if(!d.transacoes)d.transacoes=[];if(!d.metas)d.metas=[];if(!d.cats_g)d.cats_g=[];if(!d.cats_r)d.cats_r=[];if(!d.orcamentos)d.orcamentos={};if(!d.dividas)d.dividas=[];return d;}
 function banco(id){return BANCOS.find(function(b){return b.id===id;})||BANCOS[BANCOS.length-1];}
 function getCG(){var d=gd();return CATSG.concat(d.cats_g||[]);}
 function getCR(){var d=gd();return CATSR.concat(d.cats_r||[]);}
 function getCat(id){return getCG().find(function(c){return c.id===id;})||getCR().find(function(c){return c.id===id;})||{nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'};}
 function getMetaCat(id){return META_CATS.find(function(c){return c.id===id;})||META_CATS[META_CATS.length-1];}
+function getDivCat(id){return DIV_CATS.find(function(c){return c.id===id;})||DIV_CATS[DIV_CATS.length-1];}
+function getDivStatus(id){return DIV_STATUS.find(function(s){return s.id===id;})||DIV_STATUS[0];}
 function ch(){return mes+'-'+ano;}
 function txMes(txs){return txs.filter(function(t){var d=new Date(t.data+'T12:00:00');return d.getMonth()===mes&&d.getFullYear()===ano;});}
 function cicloCC(c){var df=parseInt(c.diaFecha)||1,hj=new Date(),di=hj.getDate(),mh=hj.getMonth(),ah=hj.getFullYear(),ini,fim;if(di>df){ini=new Date(ah,mh,df+1);fim=new Date(ah,mh+1,df+1);}else{ini=new Date(ah,mh-1,df+1);fim=new Date(ah,mh,df+1);}return{ini:ini,fim:fim};}
@@ -46,6 +51,35 @@ function isPago(t){if(t.tipo!=='despesa')return false;if(t.cartaoId)return false
 function isPend(t){if(t.tipo!=='despesa')return false;if(t.cartaoId)return false;if(t.pagamentos&&t.pagamentos[ch()])return false;return dataD(t.data)>hoje0();}
 function aPagar(txs){return txMes(txs).filter(isPend);}
 function getFatPend(cartoes,txs){var result=[];cartoes.forEach(function(c){var cf=cicloFechado(c);if(c.faturas&&c.faturas[cf.chave])return;var us=usadoCCCiclo(c,txs,cf);if(us<=0)return;result.push({id:'fat-'+c.id,cartaoId:c.id,cartaoNome:c.nome||banco(c.banco).nome,valor:us,dataVenc:cf.dataVenc,chave:cf.chave});});return result;}
+
+// DIVIDAS - parcelas de acordos pendentes para A Pagar
+function getParcelasDividaPend(){
+  var d=gd(),hj=hoje0(),result=[];
+  (d.dividas||[]).forEach(function(div){
+    if(div.status==='quitada')return;
+    if(!div.acordo||!div.acordo.ativo)return;
+    var ac=div.acordo;
+    if(!ac.parcTotal||!ac.parcPagas)return;
+    var restantes=ac.parcTotal-ac.parcPagas.length;
+    if(restantes<=0)return;
+    // proxima parcela
+    var proxData=ac.proxVenc;
+    if(!proxData)return;
+    var diff=Math.round((dataD(proxData)-hj)/(864e5));
+    if(diff<=30){ // mostra proximas dentro de 30 dias
+      result.push({
+        id:'div-parc-'+div.id,
+        dividaId:div.id,
+        credor:div.credor,
+        valor:ac.valorParc,
+        dataVenc:proxData,
+        parcAtual:ac.parcPagas.length+1,
+        parcTotal:ac.parcTotal
+      });
+    }
+  });
+  return result;
+}
 
 // CALCULO META
 function calcMetaAporte(m,periodo){
@@ -81,7 +115,7 @@ window.addEventListener('popstate',function(){
 
 function mudaMes(delta){mes+=delta;if(mes>11){mes=0;ano++;}if(mes<0){mes=11;ano--;}document.getElementById('mesLabel').textContent=MC[mes]+'/'+ano;renderPag();}
 function nav(p){pag=p;buscaQ='';if(p!=='cartoes')ccIdx=-1;document.querySelectorAll('.ni').forEach(function(b){b.classList.toggle('active',b.dataset.p===p);});document.getElementById('conteudo').scrollTop=0;renderPag();}
-function renderPag(){var el=document.getElementById('conteudo');if(!el)return;el.innerHTML='';if(pag==='inicio')rInicio(el);else if(pag==='lancamentos')rLanc(el);else if(pag==='metas')rMetas(el);else if(pag==='cartoes')rCartoes(el);else if(pag==='relatorios')rRel(el);}
+function renderPag(){var el=document.getElementById('conteudo');if(!el)return;el.innerHTML='';if(pag==='inicio')rInicio(el);else if(pag==='lancamentos')rLanc(el);else if(pag==='metas')rMetas(el);else if(pag==='cartoes')rCartoes(el);else if(pag==='dividas')rDividas(el);}
 
 function mkTxItem(t){
   var cat=getCat(t.cat),d=new Date(t.data+'T12:00:00'),isR=t.tipo==='receita';
@@ -117,8 +151,9 @@ function rInicio(el){
   var fatPagas=d.cartoes.filter(function(c){var cf=cicloFechado(c);return c.faturas&&c.faturas[cf.chave];}).reduce(function(a,c){var cf=cicloFechado(c);return a+usadoCCCiclo(c,d.transacoes,cf);},0);
   var depPagoTotal=depPago+fatPagas,saldoMes=rec-depPagoTotal;
   var fpend=aPagar(d.transacoes),fatsPend=getFatPend(d.cartoes,d.transacoes);
-  var depPend=fpend.reduce(function(a,t){return a+t.valor;},0)+fatsPend.reduce(function(a,f){return a+f.valor;},0);
-  var fpendTotal=fpend.length+fatsPend.length,saldoProj=saldoMes-depPend;
+  var parcDiv=getParcelasDividaPend();
+  var depPend=fpend.reduce(function(a,t){return a+t.valor;},0)+fatsPend.reduce(function(a,f){return a+f.valor;},0)+parcDiv.reduce(function(a,p){return a+p.valor;},0);
+  var fpendTotal=fpend.length+fatsPend.length+parcDiv.length,saldoProj=saldoMes-depPend;
   var txAt=fpend.filter(function(t){return dataD(t.data)<hj;}),fatAt=fatsPend.filter(function(f){return dataD(f.dataVenc)<hj;});
   var totalAt=txAt.length+fatAt.length,valorAt=txAt.reduce(function(a,t){return a+t.valor;},0)+fatAt.reduce(function(a,f){return a+f.valor;},0);
 
@@ -156,14 +191,16 @@ function rInicio(el){
     var liAP=[];
     fatsPend.forEach(function(f){var diff=Math.round((dataD(f.dataVenc)-hj)/(864e5));liAP.push({tipo:'fat',f:f,diff:diff});});
     fpend.forEach(function(t){var diff=Math.round((dataD(t.data)-hj)/(864e5));liAP.push({tipo:'tx',t:t,diff:diff});});
+    parcDiv.forEach(function(p){var diff=Math.round((dataD(p.dataVenc)-hj)/(864e5));liAP.push({tipo:'divparc',p:p,diff:diff});});
     liAP.sort(function(a,b){return a.diff-b.diff;});
     liAP.slice(0,5).forEach(function(item,idx){
       var diff=item.diff,uC=diff<0?'var(--red)':diff===0?'var(--yellow)':'var(--text3)';
-      var dS=diff<0?'Venceu':diff===0?'Hoje':'Vence '+fData(item.tipo==='fat'?item.f.dataVenc:item.t.data);
+      var dS=diff<0?'Venceu':diff===0?'Hoje':'Vence '+fData(item.tipo==='fat'?item.f.dataVenc:item.tipo==='divparc'?item.p.dataVenc:item.t.data);
       var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;padding:12px 14px;gap:10px;'+(idx>0?'border-top:.5px solid var(--border2);':'');
       var ic=document.createElement('div');ic.style.cssText='width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;';
       var nome='',valor=0;
       if(item.tipo==='fat'){var cO=d.cartoes.find(function(x){return x.id===item.f.cartaoId;})||{};var b=banco(cO.banco||'outro');ic.style.background=b.cor+'22';ic.style.color=b.cor;ic.innerHTML='&#x1F4B3;';nome='Fatura '+item.f.cartaoNome;valor=item.f.valor;}
+      else if(item.tipo==='divparc'){ic.style.background='rgba(248,113,113,.15)';ic.style.color='#f87171';ic.innerHTML='&#x26A0;';nome='Parcela '+item.p.parcAtual+'/'+item.p.parcTotal+' - '+item.p.credor;valor=item.p.valor;}
       else{var cat=getCat(item.t.cat);ic.style.background=cat.cor+'22';ic.style.color=cat.cor;ic.innerHTML=cat.ic;nome=item.t.desc;valor=item.t.valor;}
       var info=document.createElement('div');info.style.cssText='flex:1;min-width:0;';
       var nEl=document.createElement('div');nEl.style.cssText='font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';nEl.textContent=nome;
@@ -173,6 +210,7 @@ function rInicio(el){
       var vEl=document.createElement('div');vEl.style.cssText='font-size:13px;color:var(--red);';vEl.textContent=fR(valor);
       var btn=document.createElement('button');btn.className='pagar-btn '+(diff<0?'red':diff===0?'yellow':'gray');btn.textContent='Pagar';
       if(item.tipo==='fat'){btn.addEventListener('click',(function(cid){return function(e){e.stopPropagation();confirmarFatura(cid);};})(item.f.cartaoId));}
+      else if(item.tipo==='divparc'){btn.addEventListener('click',(function(pid){return function(e){e.stopPropagation();abrePagParcelaDivida(pid);};})(item.p.dividaId));}
       else{btn.addEventListener('click',(function(tid){return function(e){e.stopPropagation();abrePagTx(tid);};})(item.t.id));}
       right.appendChild(vEl);right.appendChild(btn);row.appendChild(ic);row.appendChild(info);row.appendChild(right);apC.appendChild(row);
     });
@@ -258,15 +296,13 @@ function rMetas(el){
   hdr.appendChild(tit);hdr.appendChild(add);el.appendChild(hdr);
   if(d.metas.length===0){var em=document.createElement('div');em.className='card card-pad tx-empty';em.innerHTML='&#x1F3AF;<br>Nenhuma meta criada<br><span style="font-size:12px;">Toque em + Nova para comecar</span>';el.appendChild(em);return;}
   d.metas.forEach(function(m,i){
-    var mc=getCat&&getMetaCat(m.cat||'outros');
+    var mc=getMetaCat(m.cat||'outros');
     var pct=m.alvo>0?Math.min(100,((m.atual||0)/m.alvo)*100):0;
     var falta=Math.max(0,m.alvo-(m.atual||0));
     var calc=calcMetaAporte(m);
     var ritmo=calcRitmo(m);
     var periodo=metaPeriodo[m.id]||'diario';
     var card=document.createElement('div');card.className='meta-card';
-
-    // HEADER
     var mHdr=document.createElement('div');mHdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:12px;';
     var mIc=document.createElement('div');mIc.className='meta-cat-ic';mIc.style.cssText='background:'+mc.cor+'22;color:'+mc.cor;mIc.innerHTML=mc.ic;
     var mInfo=document.createElement('div');mInfo.style.cssText='flex:1;';
@@ -275,59 +311,43 @@ function rMetas(el){
     mSub.textContent=mc.nome+(m.data?' · Ate '+fData(m.data):'');
     var mEdit=document.createElement('button');mEdit.style.cssText='background:var(--bg3);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text3);cursor:pointer;';mEdit.textContent='Editar';mEdit.addEventListener('click',function(){abreEditMeta(m.id);});
     mInfo.appendChild(mNome);mInfo.appendChild(mSub);mHdr.appendChild(mIc);mHdr.appendChild(mInfo);mHdr.appendChild(mEdit);card.appendChild(mHdr);
-
-    // VALORES
     var mVals=document.createElement('div');mVals.style.cssText='display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;';
     mVals.innerHTML='<span style="color:var(--text2);">'+fR(m.atual||0)+'</span><span style="color:var(--text3);">'+fR(m.alvo)+'</span>';
     card.appendChild(mVals);
-
-    // BARRA
     var mBar=document.createElement('div');mBar.className='meta-barra';
     var mFill=document.createElement('div');mFill.className='meta-fill';mFill.style.cssText='width:'+pct+'%;background:'+(pct>=100?'#fbbf24':mc.cor)+';';
     mBar.appendChild(mFill);card.appendChild(mBar);
-
-    // PCT E FALTA
     var mPct=document.createElement('div');mPct.style.cssText='display:flex;justify-content:space-between;font-size:11px;margin-bottom:10px;';
     mPct.innerHTML='<span style="color:'+mc.cor+';font-weight:600;">'+pct.toFixed(1)+'%</span><span style="color:var(--text3);">Faltam '+fR(falta)+'</span>';
     card.appendChild(mPct);
-
-    // RITMO
     if(ritmo){var mRitmo=document.createElement('div');mRitmo.style.cssText='font-size:11px;margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:8px;';mRitmo.innerHTML=ritmo.ok?'<span class="meta-ritmo-ok">&#10003; No ritmo</span> &nbsp; aportando '+fR(ritmo.ritmoAtual)+'/dia':'<span class="meta-ritmo-at">&#9888; Atrasado</span> &nbsp; precisa de '+fR(ritmo.necessario-ritmo.ritmoAtual)+'/dia a mais';card.appendChild(mRitmo);}
-
-    // TABS PERIODO
     if(calc&&!calc.concluida){
       var tabs=document.createElement('div');tabs.className='meta-periodo-tabs';
       ['diario','semanal','mensal'].forEach(function(p){var t=document.createElement('button');t.className='meta-tab'+(periodo===p?' ativo':'');t.textContent=p.charAt(0).toUpperCase()+p.slice(1);t.addEventListener('click',(function(pp,mi){return function(){metaPeriodo[mi]=pp;renderPag();};})(p,m.id));tabs.appendChild(t);});
       card.appendChild(tabs);
-
-      // INFO BOX
       var ib=document.createElement('div');ib.className='meta-info-box';
       var val=periodo==='diario'?calc.diario:periodo==='semanal'?calc.semanal:calc.mensal;
       var per=periodo==='diario'?'por dia':periodo==='semanal'?'por semana':'por mes';
       ib.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Aporte necessario</div>'
         +'<div style="font-size:22px;font-weight:300;color:'+mc.cor+';letter-spacing:-.5px;">'+fR(val)+'</div>'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:2px;">'+per+' &nbsp;·&nbsp; '+calc.dias+' dias restantes</div>';
-      if(m.data){var prev=new Date(dataD(m.data));ib.innerHTML+='<div style="font-size:11px;color:var(--text3);margin-top:2px;">Prazo: '+fData(m.data)+'</div>';}
+        +'<div style="font-size:11px;color:var(--text3);margin-top:2px;">'+per+' &middot; '+calc.dias+' dias restantes</div>';
+      if(m.data){ib.innerHTML+='<div style="font-size:11px;color:var(--text3);margin-top:2px;">Prazo: '+fData(m.data)+'</div>';}
       card.appendChild(ib);
     } else if(calc&&calc.concluida){
       var ib2=document.createElement('div');ib2.className='meta-info-box';ib2.style.background='rgba(62,207,142,.08)';ib2.innerHTML='<div style="font-size:22px;margin-bottom:4px;">&#127881;</div><div style="font-size:14px;font-weight:600;color:var(--accent);">Meta concluida!</div>';card.appendChild(ib2);
     }
-
-    // ACOES
     var acoes=document.createElement('div');acoes.className='meta-acoes';
     var bAp=document.createElement('button');bAp.className='meta-btn-acao';bAp.style.cssText='flex:1;padding:9px;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;border:none;background:'+mc.cor+'22;color:'+mc.cor+';';bAp.textContent='+ Aportar';bAp.addEventListener('click',(function(idx){return function(){abreAporte(idx);};})(i));
     var bRe=document.createElement('button');bRe.className='meta-btn-acao';bRe.style.cssText='flex:1;padding:9px;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;border:none;background:rgba(251,191,36,.12);color:var(--yellow);';bRe.textContent='Resgatar';bRe.addEventListener('click',(function(idx){return function(){abreResgate(idx);};})(i));
     var bHist=document.createElement('button');bHist.className='meta-btn-acao';bHist.style.cssText='flex:1;padding:9px;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;border:none;background:var(--bg3);color:var(--text3);';bHist.textContent='Historico';bHist.addEventListener('click',function(){toggleHistorico(card,m);});
     acoes.appendChild(bAp);acoes.appendChild(bRe);acoes.appendChild(bHist);card.appendChild(acoes);
-
-    // HISTORICO (colapsado)
     var histDiv=document.createElement('div');histDiv.style.display='none';histDiv.dataset.hist='1';
     if(m.historico&&m.historico.length>0){
       var hList=document.createElement('div');hList.style.cssText='margin-top:12px;border-top:.5px solid var(--border2);padding-top:10px;';
       m.historico.slice().reverse().forEach(function(h){
         var row=document.createElement('div');row.className='meta-hist-item';
         var isAp=h.tipo==='aporte';
-        row.innerHTML='<div><div style="font-size:13px;color:var(--text);">'+( isAp?'Aporte':'Resgate')+'</div><div style="font-size:10px;color:var(--text3);">'+fData(h.data)+(h.conta?' · '+h.conta:'')+'</div></div><div style="font-size:13px;font-weight:600;color:'+(isAp?'var(--accent)':'var(--yellow)')+';">'+(isAp?'+':'-')+fR(h.valor)+'</div>';
+        row.innerHTML='<div><div style="font-size:13px;color:var(--text);">'+(isAp?'Aporte':'Resgate')+'</div><div style="font-size:10px;color:var(--text3);">'+fData(h.data)+(h.conta?' · '+h.conta:'')+'</div></div><div style="font-size:13px;font-weight:600;color:'+(isAp?'var(--accent)':'var(--yellow)')+';">'+(isAp?'+':'-')+fR(h.valor)+'</div>';
         hList.appendChild(row);
       });
       histDiv.appendChild(hList);
@@ -398,14 +418,14 @@ function buildGraficoCC(el,c,txs){
   for(var i=6;i>=1;i--){var mm=hj2.getMonth()-i,aa=hj2.getFullYear();if(mm<0){mm+=12;aa--;}meses.push({m:mm,a:aa});}
   meses.push({m:hj2.getMonth(),a:hj2.getFullYear()});
   var ulP=null;txs.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;}).forEach(function(t){var mr=t.parcTotal-t.parcAtual,mf=hj2.getMonth()+mr,af=hj2.getFullYear();while(mf>11){mf-=12;af++;}if(!ulP||(af>ulP.a||(af===ulP.a&&mf>ulP.m)))ulP={m:mf,a:af};});
-  if(ulP){var mm=hj2.getMonth()+1,aa=hj2.getFullYear();if(mm>11){mm=0;aa++;}while(aa<ulP.a||(aa===ulP.a&&mm<=ulP.m)){meses.push({m:mm,a:aa});mm++;if(mm>11){mm=0;aa++;}}}
+  if(ulP){var mm2=hj2.getMonth()+1,aa2=hj2.getFullYear();if(mm2>11){mm2=0;aa2++;}while(aa2<ulP.a||(aa2===ulP.a&&mm2<=ulP.m)){meses.push({m:mm2,a:aa2});mm2++;if(mm2>11){mm2=0;aa2++;}}}
   var MXV=1,dadosMes=meses.map(function(md){var val=txs.filter(function(t){if(!t.cartaoId||t.cartaoId!==c.id)return false;var d=new Date(t.data+'T12:00:00');if(d.getMonth()===md.m&&d.getFullYear()===md.a)return true;if(t.parcTotal&&t.parcAtual<t.parcTotal){var diff=(md.a-d.getFullYear())*12+(md.m-d.getMonth());if(diff>0&&diff<=(t.parcTotal-t.parcAtual))return true;}return false;}).reduce(function(a,t){return a+t.valor;},0);if(val>MXV)MXV=val;return{m:md.m,a:md.a,val:val};});
   var isSel=function(md){return md.m===ccMesSel.m&&md.a===ccMesSel.a;},isAt=function(md){return md.m===hj2.getMonth()&&md.a===hj2.getFullYear();},isFut=function(md){return md.a>hj2.getFullYear()||(md.a===hj2.getFullYear()&&md.m>hj2.getMonth());};
   var bW=Math.max(36,Math.floor(280/Math.max(dadosMes.length,1)));
   var gtit=document.createElement('div');gtit.style.cssText='font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;';gtit.textContent='Historico';el.appendChild(gtit);
   var gc=document.createElement('div');gc.className='card card-pad';
   var bars=document.createElement('div');bars.style.cssText='display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;align-items:flex-end;height:110px;';
-  dadosMes.forEach(function(md){var bH=MXV>0?Math.max(4,Math.round((md.val/MXV)*80)):4,cor=isSel(md)?'#fff':isAt(md)?'#3ecf8e':isFut(md)?'#fbbf24':'#38bdf8',op=isSel(md)?'1':isFut(md)?'0.7':'0.5',mm=md.m,aa=md.a;var bc=document.createElement('div');bc.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex-shrink:0;width:'+bW+'px;';bc.innerHTML='<div style="font-size:9px;color:var(--text3);white-space:nowrap;">'+fRs(md.val)+'</div><div style="height:'+bH+'px;width:'+(bW-8)+'px;background:'+cor+';opacity:'+op+';border-radius:3px 3px 0 0;'+(isSel(md)?'box-shadow:0 0 8px '+cor+';':'')+'"></div><div style="font-size:8px;color:'+(isSel(md)?'#fff':isAt(md)?'#3ecf8e':isFut(md)?'#fbbf24':'var(--text3)')+';white-space:nowrap;">'+MC[mm]+'/'+aa.toString().slice(2)+'</div>';bc.onclick=(function(m,a){return function(){selecionaMesCC(m,a);};})(mm,aa);bars.appendChild(bc);});
+  dadosMes.forEach(function(md){var bH=MXV>0?Math.max(4,Math.round((md.val/MXV)*80)):4,cor=isSel(md)?'#fff':isAt(md)?'#3ecf8e':isFut(md)?'#fbbf24':'#38bdf8',op=isSel(md)?'1':isFut(md)?'0.7':'0.5',mm3=md.m,aa3=md.a;var bc2=document.createElement('div');bc2.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex-shrink:0;width:'+bW+'px;';bc2.innerHTML='<div style="font-size:9px;color:var(--text3);white-space:nowrap;">'+fRs(md.val)+'</div><div style="height:'+bH+'px;width:'+(bW-8)+'px;background:'+cor+';opacity:'+op+';border-radius:3px 3px 0 0;'+(isSel(md)?'box-shadow:0 0 8px '+cor+';':'')+'"></div><div style="font-size:8px;color:'+(isSel(md)?'#fff':isAt(md)?'#3ecf8e':isFut(md)?'#fbbf24':'var(--text3)')+';white-space:nowrap;">'+MC[mm3]+'/'+aa3.toString().slice(2)+'</div>';bc2.onclick=(function(m,a){return function(){selecionaMesCC(m,a);};})(mm3,aa3);bars.appendChild(bc2);});
   gc.appendChild(bars);el.appendChild(gc);
 }
 
@@ -423,21 +443,142 @@ function buildLancamentosCC(el,c,txs){
   el.appendChild(lc);
 }
 
-// RENDER RESUMO
-function rRel(el){
+// ═══════════════════════════════════════
+// RENDER DIVIDAS
+// ═══════════════════════════════════════
+function rDividas(el){
+  var d=gd(),divs=d.dividas||[];
+
+  // HEADER
+  var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
+  var tit=document.createElement('div');tit.style.cssText='font-size:20px;font-weight:700;';tit.textContent='Dividas';
+  var add=document.createElement('button');add.style.cssText='background:var(--red);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;';add.textContent='+ Nova';add.addEventListener('click',function(){abreNovaDivida();});
+  hdr.appendChild(tit);hdr.appendChild(add);el.appendChild(hdr);
+
+  // TOTAIS
+  var totalAberto=divs.filter(function(d){return d.status==='aberto';}).reduce(function(a,d){return a+(d.valorAtual||d.valorOriginal||0);},0);
+  var totalNeg=divs.filter(function(d){return d.status==='negociando';}).reduce(function(a,d){return a+(d.valorAtual||d.valorOriginal||0);},0);
+  var totalAcordo=divs.filter(function(d){return d.status==='acordo';}).reduce(function(a,d){return a+(d.acordo?d.acordo.valorTotal:0);},0);
+  var totalQuit=divs.filter(function(d){return d.status==='quitada';}).reduce(function(a,d){return a+(d.valorOriginal||0);},0);
+  var totalDevendo=totalAberto+totalNeg+totalAcordo;
+
+  var resumoCard=document.createElement('div');resumoCard.className='card card-pad';resumoCard.style.marginBottom='16px';
+  resumoCard.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Visao Geral</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<div style="background:rgba(248,113,113,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em aberto</div><div style="font-size:16px;font-weight:300;color:#f87171;letter-spacing:-.5px;">'+fRs(totalAberto)+'</div></div>'
+    +'<div style="background:rgba(251,191,36,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Negociando</div><div style="font-size:16px;font-weight:300;color:var(--yellow);letter-spacing:-.5px;">'+fRs(totalNeg)+'</div></div>'
+    +'<div style="background:rgba(96,165,250,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em acordo</div><div style="font-size:16px;font-weight:300;color:#60a5fa;letter-spacing:-.5px;">'+fRs(totalAcordo)+'</div></div>'
+    +'<div style="background:rgba(74,222,128,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Quitado</div><div style="font-size:16px;font-weight:300;color:#4ade80;letter-spacing:-.5px;">'+fRs(totalQuit)+'</div></div>'
+    +'</div>'
+    +(totalDevendo>0?'<div style="margin-top:12px;padding-top:10px;border-top:.5px solid var(--border2);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text3);">Total em aberto/pendente</span><span style="font-size:15px;font-weight:600;color:#f87171;">'+fR(totalDevendo)+'</span></div>':'');
+  el.appendChild(resumoCard);
+
+  // FILTROS
+  var chips=document.createElement('div');chips.className='chips';chips.style.marginBottom='14px';
+  [{id:'ativos',nome:'Ativos'},{id:'aberto',nome:'Em aberto'},{id:'negociando',nome:'Negociando'},{id:'acordo',nome:'Em acordo'},{id:'quitada',nome:'Quitadas'}].forEach(function(f){
+    var c=document.createElement('div');c.className='chip'+(divFiltro===f.id?' ativo':'');c.textContent=f.nome;
+    c.addEventListener('click',function(){divFiltro=f.id;renderPag();});chips.appendChild(c);
+  });
+  el.appendChild(chips);
+
+  // LISTA
+  var fl=divs;
+  if(divFiltro==='ativos')fl=divs.filter(function(d){return d.status!=='quitada';});
+  else if(divFiltro==='quitada')fl=divs.filter(function(d){return d.status==='quitada';});
+  else fl=divs.filter(function(d){return d.status===divFiltro;});
+
+  if(fl.length===0){
+    var em=document.createElement('div');em.className='card card-pad tx-empty';
+    em.innerHTML='&#x1F4B0;<br>'+(divs.length===0?'Nenhuma divida cadastrada<br><span style="font-size:12px;">Toque em + Nova para comecar</span>':'Nenhuma divida nesta categoria');
+    el.appendChild(em);
+    // Resumo financeiro no final
+    rRelatorio(el);
+    return;
+  }
+
+  fl.forEach(function(div){
+    var dc=getDivCat(div.cat||'outros'),st=getDivStatus(div.status||'aberto');
+    var card=document.createElement('div');card.className='card card-pad';card.style.marginBottom='10px';
+
+    // Borda de status
+    card.style.borderLeft='3px solid '+st.cor;
+
+    // Header da divida
+    var dHdr=document.createElement('div');dHdr.style.cssText='display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;';
+    var dIc=document.createElement('div');dIc.style.cssText='width:40px;height:40px;border-radius:10px;background:'+dc.cor+'22;color:'+dc.cor+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;';dIc.innerHTML=dc.ic;
+    var dInfo=document.createElement('div');dInfo.style.cssText='flex:1;';
+    var dNome=document.createElement('div');dNome.style.cssText='font-size:15px;font-weight:600;';dNome.textContent=div.credor;
+    var dSub=document.createElement('div');dSub.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;';
+    dSub.textContent=dc.nome+(div.dataVenc?' · Venceu em '+fData(div.dataVenc):'');
+    var dStBdg=document.createElement('span');dStBdg.style.cssText='display:inline-block;margin-top:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:'+st.cor+'22;color:'+st.cor+';';dStBdg.textContent=st.nome;
+    dInfo.appendChild(dNome);dInfo.appendChild(dSub);dInfo.appendChild(document.createElement('br'));dInfo.appendChild(dStBdg);
+    var dEdit=document.createElement('button');dEdit.style.cssText='background:var(--bg3);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text3);cursor:pointer;flex-shrink:0;';dEdit.textContent='Editar';dEdit.addEventListener('click',(function(id){return function(){abreEditDivida(id);};})(div.id));
+    dHdr.appendChild(dIc);dHdr.appendChild(dInfo);dHdr.appendChild(dEdit);card.appendChild(dHdr);
+
+    // Valores
+    var dVals=document.createElement('div');dVals.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
+    var v1=document.createElement('div');v1.style.cssText='background:var(--bg3);border-radius:8px;padding:8px;';v1.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Valor original</div><div style="font-size:14px;font-weight:300;color:var(--text);">'+fR(div.valorOriginal||0)+'</div>';
+    var v2=document.createElement('div');v2.style.cssText='background:var(--bg3);border-radius:8px;padding:8px;';
+    if(div.valorAtual&&div.valorAtual!==div.valorOriginal){v2.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Valor atual c/juros</div><div style="font-size:14px;font-weight:300;color:#f87171;">'+fR(div.valorAtual)+'</div>';}
+    else{v2.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Categoria</div><div style="font-size:14px;font-weight:300;color:var(--text);">'+dc.nome+'</div>';}
+    dVals.appendChild(v1);dVals.appendChild(v2);card.appendChild(dVals);
+
+    // Acordo ativo
+    if(div.acordo&&div.acordo.ativo){
+      var ac=div.acordo;
+      var parcPagas=ac.parcPagas?ac.parcPagas.length:0;
+      var pct=ac.parcTotal>0?Math.min(100,(parcPagas/ac.parcTotal)*100):0;
+      var acDiv=document.createElement('div');acDiv.style.cssText='background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:10px;margin-bottom:10px;';
+      acDiv.innerHTML='<div style="font-size:11px;font-weight:600;color:#60a5fa;margin-bottom:8px;">&#x1F91D; Acordo ativo</div>'
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Valor negociado</span><span style="color:var(--text);font-weight:600;">'+fR(ac.valorTotal)+'</span></div>'
+        +(ac.desconto?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Desconto obtido</span><span style="color:#4ade80;font-weight:600;">'+fR(ac.desconto)+'</span></div>':'')
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;"><span style="color:var(--text3);">Parcelas pagas</span><span style="color:var(--text);font-weight:600;">'+parcPagas+' / '+ac.parcTotal+'</span></div>'
+        +'<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:'+pct+'%;background:#60a5fa;border-radius:3px;"></div></div>'
+        +'<div style="font-size:10px;color:var(--text3);">'+pct.toFixed(0)+'% quitado &middot; Parcela: '+fR(ac.valorParc)+(ac.protocolo?' &middot; Prot: '+ac.protocolo:'')+'</div>';
+      card.appendChild(acDiv);
+    }
+
+    // Observacao
+    if(div.obs){var dObs=document.createElement('div');dObs.style.cssText='font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 10px;background:var(--bg3);border-radius:8px;';dObs.textContent=div.obs;card.appendChild(dObs);}
+
+    // Acoes
+    if(div.status!=='quitada'){
+      var acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:8px;';
+      if(!div.acordo||!div.acordo.ativo){
+        var bAc=document.createElement('button');bAc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bAc.textContent='&#x1F91D; Acordo';bAc.addEventListener('click',(function(id){return function(){abreAcordo(id);};})(div.id));acoes.appendChild(bAc);
+      } else {
+        var bPc=document.createElement('button');bPc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPc.textContent='&#x1F4B5; Pagar parcela';bPc.addEventListener('click',(function(id){return function(){abrePagParcelaDivida(id);};})(div.id));acoes.appendChild(bPc);
+      }
+      var bQ=document.createElement('button');bQ.style.cssText='padding:8px 12px;background:rgba(74,222,128,.1);color:#4ade80;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bQ.textContent='&#x2713; Quitar';bQ.addEventListener('click',(function(id){return function(){quitarDivida(id);};})(div.id));acoes.appendChild(bQ);
+      card.appendChild(acoes);
+    }
+
+    el.appendChild(card);
+  });
+
+  // Resumo financeiro no final
+  rRelatorio(el);
+}
+
+// RESUMO FINANCEIRO (antigo rRel, agora no final da aba Dividas)
+function rRelatorio(el){
   var d=gd(),ts=txMes(d.transacoes);
   var rec=ts.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
   var depPago=ts.filter(isPago).reduce(function(a,t){return a+t.valor;},0)+d.cartoes.filter(function(c){var cf=cicloFechado(c);return c.faturas&&c.faturas[cf.chave];}).reduce(function(a,c){var cf=cicloFechado(c);return a+usadoCCCiclo(c,d.transacoes,cf);},0);
   var fpend=aPagar(d.transacoes),fatsPend=getFatPend(d.cartoes,d.transacoes);
   var depPend=fpend.reduce(function(a,t){return a+t.valor;},0)+fatsPend.reduce(function(a,f){return a+f.valor;},0);
   var depTotal=depPago+depPend,saldo=rec-depPago;
-  var t1=document.createElement('div');t1.className='rel-sec';t1.textContent='Visao Geral';el.appendChild(t1);
+
+  var divSep=document.createElement('div');divSep.style.cssText='margin-top:24px;padding-top:4px;';
+  var t1=document.createElement('div');t1.className='rel-sec';t1.textContent='Resumo Financeiro';divSep.appendChild(t1);el.appendChild(divSep);
+
   var g3=document.createElement('div');g3.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;';
   function mk3(lbl,val,cor,sub,fn){var c=document.createElement('div');c.className='sbox';c.innerHTML='<div class="slabel">'+lbl+'</div><div class="sval '+cor+'">'+fRs(val)+'</div>'+(sub?'<div class="ssub">'+sub+'</div>':'');if(fn)c.addEventListener('click',fn);return c;}
   g3.appendChild(mk3('Entradas',rec,'g','',function(){abrePagos();}));
   g3.appendChild(mk3('Saidas',depTotal,'r','',function(){abreAPagar();}));
   g3.appendChild(mk3('Saldo',saldo,saldo>=0?'g':'r','apos pagos',null));
   el.appendChild(g3);
+
   var catMap={};ts.filter(function(t){return t.tipo==='despesa';}).forEach(function(t){catMap[t.cat]=(catMap[t.cat]||0)+t.valor;});
   var td=Object.values(catMap).reduce(function(a,v){return a+v;},0);
   var t2=document.createElement('div');t2.className='rel-sec';t2.textContent='Gastos por Categoria';el.appendChild(t2);
@@ -452,6 +593,7 @@ function rRel(el){
     cats.forEach(function(cid){var cat=getCat(cid),pct=(catMap[cid]/td)*100,orc=d.orcamentos[cid],orcPct=orc?Math.min(100,(catMap[cid]/orc)*100):0,orcCor=orcPct>90?'var(--red)':orcPct>70?'var(--yellow)':'var(--accent)';gc.innerHTML+='<div class="bud-item"><div class="bud-hdr"><div class="bud-cat"><span>'+cat.ic+'</span>'+cat.nome+'</div><div class="bud-vals">'+fR(catMap[cid])+(orc?' / '+fR(orc):'')+'</div></div><div class="bud-bar"><div class="bud-fill" style="width:'+(orc?orcPct:pct)+'%;background:'+(orc?orcCor:cat.cor)+'"></div></div>'+(orc?'<div class="bud-pct">'+orcPct.toFixed(0)+'% do orcamento</div>':'')+'</div>';});
     el.appendChild(gc);
   } else {var emC=document.createElement('div');emC.className='card card-pad tx-empty';emC.textContent='Nenhum gasto neste mes';el.appendChild(emC);}
+
   var t3=document.createElement('div');t3.className='rel-sec';t3.textContent='Historico 6 Meses';el.appendChild(t3);
   var hCard=document.createElement('div');hCard.className='card card-pad';
   var mds=[],mx=1;
@@ -467,6 +609,7 @@ function rRel(el){
     +mds.map(function(m){return'<div style="font-size:9px;color:var(--text3);text-align:center;flex:1;">'+m.l+'</div>';}).join('')
     +'</div><div style="display:flex;gap:14px;margin-top:10px;"><div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:14px;height:2px;background:var(--accent);border-radius:1px;"></div>Entradas</div><div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:14px;height:2px;background:var(--red);border-radius:1px;"></div>Saidas</div></div>';
   el.appendChild(hCard);
+
   var t4=document.createElement('div');t4.className='rel-sec';t4.style.display='flex';t4.style.justifyContent='space-between';t4.style.alignItems='center';t4.innerHTML='<span>Orcamentos</span>';
   var oA=document.createElement('span');oA.style.cssText='color:var(--accent);cursor:pointer;font-size:11px;font-weight:500;';oA.textContent='+ Definir';oA.addEventListener('click',function(){abM('sh-orc');});t4.appendChild(oA);el.appendChild(t4);
   var orcKeys=Object.keys(d.orcamentos||{});
@@ -478,6 +621,170 @@ function rRel(el){
     d.cartoes.forEach(function(c){var b=banco(c.banco),us=usadoCC(c,d.transacoes),comp=comprometidoCC(c,d.transacoes),disp=c.limite-comp,pct=c.limite>0?Math.min(100,(comp/c.limite)*100):0,bc=pct>85?'var(--red)':pct>60?'var(--yellow)':'var(--accent)';var parc=d.transacoes.filter(function(t){return t.cartaoId===c.id&&t.parcTotal&&t.parcAtual<t.parcTotal;}),totParc=parc.reduce(function(a,t){return a+(t.valor*(t.parcTotal-t.parcAtual));},0);kC.innerHTML+='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--border2);"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:11px;font-weight:800;color:'+b.txt+';background:'+b.cor+';padding:2px 8px;border-radius:5px;">'+b.sigla+'</span><span style="font-size:13px;font-weight:600;">'+(c.nome||b.nome)+'</span></div><div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:5px;"><div style="height:100%;width:'+Math.min(100,pct)+'%;background:'+bc+';border-radius:3px;"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;"><span>Fatura: <b style="color:var(--red)">'+fR(us)+'</b></span><span>Disponivel: <b style="color:var(--accent)">'+fR(disp)+'</b></span></div>'+(totParc>0?'<div style="font-size:11px;color:var(--text3);margin-top:3px;">Parcelas: <b style="color:var(--yellow)">'+fR(totParc)+'</b></div>':'')+'</div>';});
     el.appendChild(kC);
   }
+}
+
+// ═══════════════════════════════════════
+// DIVIDAS - CRUD
+// ═══════════════════════════════════════
+function abreNovaDivida(){
+  editDividaId=null;divCatSel='outros';divStatusSel='aberto';
+  var e;
+  ['div-credor','div-obs','div-protocolo'].forEach(function(id){e=document.getElementById(id);if(e)e.value='';});
+  ['div-valor-orig','div-valor-atual','div-ac-total','div-ac-parc','div-ac-valparc','div-ac-dia'].forEach(function(id){e=document.getElementById(id);if(e)e.value='';});
+  e=document.getElementById('div-venc');if(e)e.value='';
+  e=document.getElementById('div-ac-primeiro');if(e)e.value='';
+  e=document.getElementById('sh-div-title');if(e)e.textContent='Nova Divida';
+  e=document.getElementById('btn-salva-div');if(e)e.textContent='Cadastrar Divida';
+  e=document.getElementById('btn-del-div');if(e)e.style.display='none';
+  e=document.getElementById('div-acordo-sec');if(e)e.style.display='none';
+  bDivCatGrid();bDivStatusGrid();
+  abM('sh-div');
+}
+
+function abreEditDivida(id){
+  var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
+  if(!div)return;
+  editDividaId=id;divCatSel=div.cat||'outros';divStatusSel=div.status||'aberto';
+  var e;
+  e=document.getElementById('div-credor');if(e)e.value=div.credor||'';
+  e=document.getElementById('div-obs');if(e)e.value=div.obs||'';
+  e=document.getElementById('div-venc');if(e)e.value=div.dataVenc||'';
+  e=document.getElementById('div-valor-orig');if(e)e.value=fR(div.valorOriginal||0).replace('R$ ','');
+  e=document.getElementById('div-valor-atual');if(e)e.value=div.valorAtual?fR(div.valorAtual).replace('R$ ',''):'';
+  var acSec=document.getElementById('div-acordo-sec');
+  if(div.acordo&&div.acordo.ativo){
+    var ac=div.acordo;
+    e=document.getElementById('div-ac-total');if(e)e.value=fR(ac.valorTotal||0).replace('R$ ','');
+    e=document.getElementById('div-ac-parc');if(e)e.value=ac.parcTotal||'';
+    e=document.getElementById('div-ac-valparc');if(e)e.value=fR(ac.valorParc||0).replace('R$ ','');
+    e=document.getElementById('div-ac-dia');if(e)e.value=ac.diaVenc||'';
+    e=document.getElementById('div-ac-primeiro');if(e)e.value=ac.proxVenc||'';
+    e=document.getElementById('div-protocolo');if(e)e.value=ac.protocolo||'';
+    if(acSec)acSec.style.display='block';
+  } else {
+    if(acSec)acSec.style.display='none';
+  }
+  e=document.getElementById('sh-div-title');if(e)e.textContent='Editar Divida';
+  e=document.getElementById('btn-salva-div');if(e)e.textContent='Salvar';
+  e=document.getElementById('btn-del-div');if(e)e.style.display='block';
+  bDivCatGrid();bDivStatusGrid();
+  abM('sh-div');
+}
+
+function salvaDivida(){
+  var credor=document.getElementById('div-credor').value.trim();
+  if(!credor){toast('Informe o credor','err');return;}
+  var valOrig=pv('div-valor-orig');
+  if(!valOrig){toast('Informe o valor','err');return;}
+  var valAtual=pv('div-valor-atual')||valOrig;
+  var dataVenc=document.getElementById('div-venc').value;
+  var obs=document.getElementById('div-obs').value.trim();
+  var d=gd();
+  if(editDividaId){
+    var div=d.dividas.find(function(x){return x.id===editDividaId;});
+    if(div){div.credor=credor;div.cat=divCatSel;div.status=divStatusSel;div.valorOriginal=valOrig;div.valorAtual=valAtual;div.dataVenc=dataVenc;div.obs=obs;}
+    toast('Divida atualizada!','ok');
+  } else {
+    d.dividas.push({id:uid(),credor:credor,cat:divCatSel,status:divStatusSel,valorOriginal:valOrig,valorAtual:valAtual,dataVenc:dataVenc,obs:obs,dataCad:new Date().toISOString().split('T')[0]});
+    toast('Divida cadastrada!','ok');
+  }
+  save(d);fcM('sh-div');editDividaId=null;renderPag();
+}
+
+function deletaDivida(){
+  if(!editDividaId)return;
+  if(!confirm('Excluir esta divida?'))return;
+  var d=gd();d.dividas=d.dividas.filter(function(x){return x.id!==editDividaId;});
+  save(d);fcM('sh-div');editDividaId=null;toast('Divida excluida!','ok');renderPag();
+}
+
+function quitarDivida(id){
+  if(!confirm('Marcar como quitada?'))return;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
+  if(div){div.status='quitada';div.dataQuit=new Date().toISOString().split('T')[0];}
+  save(d);toast('Divida quitada!','ok');renderPag();
+}
+
+// ACORDO
+function abreAcordo(id){
+  editDividaId=id;
+  var e;
+  ['div-ac-total','div-ac-parc','div-ac-valparc','div-ac-dia'].forEach(function(eid){e=document.getElementById(eid);if(e)e.value='';});
+  e=document.getElementById('div-ac-primeiro');if(e)e.value=new Date().toISOString().split('T')[0];
+  e=document.getElementById('div-protocolo');if(e)e.value='';
+  e=document.getElementById('div-ac-desc');if(e)e.value='';
+  var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
+  if(div){e=document.getElementById('sh-acordo-credor');if(e)e.textContent=div.credor;e=document.getElementById('sh-acordo-orig');if(e)e.textContent=fR(div.valorAtual||div.valorOriginal||0);}
+  abM('sh-acordo');
+}
+
+function salvaAcordo(){
+  var total=pv('ac-total');if(!total){toast('Informe o valor negociado','err');return;}
+  var parc=parseInt(document.getElementById('ac-parc').value)||1;
+  var diaVenc=parseInt(document.getElementById('ac-dia').value)||10;
+  var proxVenc=document.getElementById('ac-primeiro').value;
+  if(!proxVenc){toast('Informe a data da 1a parcela','err');return;}
+  var protocolo=document.getElementById('ac-protocolo').value.trim();
+  var desconto=pv('ac-desc')||0;
+  var valorParc=Math.round((total/parc)*100)/100;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
+  if(!div)return;
+  div.status='acordo';
+  div.acordo={ativo:true,valorTotal:total,desconto:desconto,parcTotal:parc,valorParc:valorParc,diaVenc:diaVenc,proxVenc:proxVenc,protocolo:protocolo,parcPagas:[],dataCad:new Date().toISOString().split('T')[0]};
+  save(d);fcM('sh-acordo');toast('Acordo registrado!','ok');editDividaId=null;renderPag();
+}
+
+// PAGAR PARCELA DIVIDA
+function abrePagParcelaDivida(id){
+  editDividaId=id;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
+  if(!div||!div.acordo)return;
+  var ac=div.acordo,parcAtual=ac.parcPagas?ac.parcPagas.length+1:1;
+  var info=document.getElementById('pag-div-info');
+  if(info)info.innerHTML='<div style="font-size:14px;font-weight:600;margin-bottom:4px;">'+div.credor+'</div>'
+    +'<div style="font-size:20px;font-weight:300;color:var(--red);letter-spacing:-.5px;margin-bottom:4px;">'+fR(ac.valorParc)+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);">Parcela '+parcAtual+' de '+ac.parcTotal+'</div>';
+  var dp=document.getElementById('pag-div-data');if(dp)dp.value=new Date().toISOString().split('T')[0];
+  var sel=document.getElementById('pag-div-conta');
+  if(sel){sel.innerHTML=d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');if(!d.contas.length)sel.innerHTML='<option value="">Sem conta</option>';}
+  abM('sh-pag-div');
+}
+
+function confirmaPagParcelaDivida(){
+  var data=document.getElementById('pag-div-data').value;
+  if(!data){toast('Informe a data','err');return;}
+  var contaId=document.getElementById('pag-div-conta').value;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
+  if(!div||!div.acordo)return;
+  var ac=div.acordo,valor=ac.valorParc;
+  if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c)c.saldo-=valor;}
+  if(!ac.parcPagas)ac.parcPagas=[];
+  ac.parcPagas.push({data:data,valor:valor,conta:contaId});
+  // Calcula proxima parcela
+  if(ac.parcPagas.length>=ac.parcTotal){div.status='quitada';div.dataQuit=data;ac.ativo=false;}
+  else{
+    var prox=new Date(data+'T12:00:00');prox.setMonth(prox.getMonth()+1);
+    ac.proxVenc=prox.toISOString().split('T')[0];
+  }
+  save(d);fcM('sh-pag-div');toast('Parcela paga!','ok');editDividaId=null;renderPag();
+}
+
+function bDivCatGrid(){
+  var e=document.getElementById('div-cat-grid');if(!e)return;
+  e.innerHTML=DIV_CATS.map(function(c){var sel=divCatSel===c.id;return'<div style="text-align:center;cursor:pointer;padding:8px 4px;border-radius:10px;border:1.5px solid '+(sel?c.cor:'transparent')+';background:'+(sel?c.cor+'22':'transparent')+'" onclick="selDivCat(\''+c.id+'\')"><div style="font-size:18px;margin-bottom:2px;">'+c.ic+'</div><div style="font-size:9px;color:'+(sel?c.cor:'var(--text3)')+'">'+c.nome+'</div></div>';}).join('');
+}
+function selDivCat(id){divCatSel=id;bDivCatGrid();}
+
+function bDivStatusGrid(){
+  var e=document.getElementById('div-status-grid');if(!e)return;
+  e.innerHTML=DIV_STATUS.filter(function(s){return s.id!=='quitada';}).map(function(s){var sel=divStatusSel===s.id;return'<div style="cursor:pointer;padding:7px 10px;border-radius:8px;border:1.5px solid '+(sel?s.cor:'var(--border2)')+';background:'+(sel?s.cor+'18':'transparent')+';text-align:center;" onclick="selDivStatus(\''+s.id+'\')"><div style="font-size:11px;font-weight:600;color:'+(sel?s.cor:'var(--text3)')+'">'+s.nome+'</div></div>';}).join('');
+}
+function selDivStatus(id){divStatusSel=id;bDivStatusGrid();}
+
+function calcValParc(){
+  var total=pv('ac-total'),parc=parseInt(document.getElementById('ac-parc').value)||0;
+  var e=document.getElementById('ac-valparc');
+  if(e&&total>0&&parc>0)e.value=fR(total/parc).replace('R$ ','');
 }
 
 // SHEETS
@@ -509,9 +816,10 @@ function abrePagTx(id){pagTxId=id;var d=gd(),t=d.transacoes.find(function(x){ret
 function confirmarFatura(cartaoId){var d=gd(),c=d.cartoes.find(function(x){return x.id===cartaoId;});if(!c)return;pagTxId='fat-'+cartaoId;var cf=cicloFechado(c),us=usadoCCCiclo(c,d.transacoes,cf);var e=document.getElementById('pag-info');if(e)e.innerHTML='<div style="font-size:14px;font-weight:600;margin-bottom:4px;">Fatura '+(c.nome||banco(c.banco).nome)+'</div><div style="font-size:20px;font-weight:300;color:var(--red);letter-spacing:-.5px;margin-bottom:4px;">'+fR(us)+'</div><div style="font-size:11px;color:var(--text3);">Vence: '+fData(cf.dataVenc)+'</div>';e=document.getElementById('pag-data');if(e)e.value=new Date().toISOString().split('T')[0];fcM('sh-apagar');abM('sh-pag');}
 function confirmaPag(){var data=document.getElementById('pag-data').value;if(!data){toast('Informe a data','err');return;}if(pagTxId&&pagTxId.indexOf('fat-')===0){var cartaoId=pagTxId.replace('fat-',''),d=gd(),c=d.cartoes.find(function(x){return x.id===cartaoId;});if(!c)return;if(!c.faturas)c.faturas={};var cf=cicloFechado(c),chv=cf.chave;c.faturas[chv]=data;var at=dataD(data)>dataD(cf.dataVenc);if(at){if(!c.faturasAtraso)c.faturasAtraso={};c.faturasAtraso[chv]=true;}save(d);fcM('sh-pag');toast(at?'Pago em atraso':'Fatura paga!',at?'warn':'ok');renderPag();return;}var d=gd(),t=d.transacoes.find(function(x){return x.id===pagTxId;});if(t){if(!t.pagamentos)t.pagamentos={};t.pagamentos[ch()]=data;}save(d);fcM('sh-pag');var at2=t&&dataD(data)>dataD(t.data);toast(at2?'Pago em atraso':'Confirmado!',at2?'warn':'ok');renderPag();}
 
-function abreAPagar(){var d=gd(),fps=aPagar(d.transacoes),fats=getFatPend(d.cartoes,d.transacoes);var el=document.getElementById('lista-apagar');if(!el)return;el.innerHTML='';if(fps.length===0&&fats.length===0){el.innerHTML='<div class="tx-empty">Tudo em dia!</div>';abM('sh-apagar');return;}var hj=hoje0(),atrasadas=[],deHoje=[],futuras=[];fps.forEach(function(t){var diff=Math.round((dataD(t.data)-hj)/(864e5));if(diff<0)atrasadas.push({tipo:'tx',t:t,diff:diff});else if(diff===0)deHoje.push({tipo:'tx',t:t,diff:0});else futuras.push({tipo:'tx',t:t,diff:diff});});fats.forEach(function(f){var diff=Math.round((dataD(f.dataVenc)-hj)/(864e5));if(diff<0)atrasadas.push({tipo:'fat',f:f,diff:diff});else if(diff===0)deHoje.push({tipo:'fat',f:f,diff:0});else futuras.push({tipo:'fat',f:f,diff:diff});});atrasadas.sort(function(a,b){return a.diff-b.diff;});futuras.sort(function(a,b){return a.diff-b.diff;});
-function mkItem(item,cor){var row=document.createElement('div');row.className='tx-item';var diff=item.diff,dataStr=diff<0?'Atrasado '+Math.abs(diff)+' dia(s)':diff===0?'Hoje':fData(item.tipo==='fat'?item.f.dataVenc:item.t.data);var ic=document.createElement('div');ic.className='tx-icone';var nome='',valor=0;if(item.tipo==='fat'){var cO=d.cartoes.find(function(x){return x.id===item.f.cartaoId;})||{};var b=banco(cO.banco||'outro');ic.style.cssText='background:'+b.cor+'22;color:'+b.cor;ic.innerHTML='&#x1F4B3;';nome='Fatura '+item.f.cartaoNome;valor=item.f.valor;}else{var cat=getCat(item.t.cat);ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;nome=item.t.desc+(item.t.parcTotal?' ('+item.t.parcAtual+'/'+item.t.parcTotal+')':'');valor=item.t.valor;}var info=document.createElement('div');info.className='tx-info';info.innerHTML='<div class="tx-nome">'+nome+'</div><div class="tx-cat" style="color:'+cor+'">'+dataStr+'</div>';var right=document.createElement('div');right.className='tx-right';var vEl=document.createElement('div');vEl.className='tx-valor';vEl.textContent=fR(valor);var btn=document.createElement('button');btn.className='pagar-btn '+(diff<0?'red':diff===0?'yellow':'gray');btn.textContent='Pagar';if(item.tipo==='fat'){btn.addEventListener('click',(function(cid){return function(){confirmarFatura(cid);};})(item.f.cartaoId));}else{btn.addEventListener('click',(function(tid){return function(){fcM('sh-apagar');abrePagTx(tid);};})(item.t.id));}right.appendChild(vEl);right.appendChild(btn);row.appendChild(ic);row.appendChild(info);row.appendChild(right);return row;}
-function mkGrupo(lista,titulo,cor){if(!lista.length)return;var total=lista.reduce(function(a,item){return a+(item.tipo==='tx'?item.t.valor:item.f.valor);},0);var sec=document.createElement('div');sec.style.marginBottom='14px';var hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';hdr.innerHTML='<span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+' ('+lista.length+')</span><span style="font-size:13px;font-weight:700;color:'+cor+';">'+fR(total)+'</span>';sec.appendChild(hdr);var card=document.createElement('div');card.className='card';card.style.padding='0';lista.forEach(function(item){card.appendChild(mkItem(item,cor));});sec.appendChild(card);el.appendChild(sec);}
+function abreAPagar(){var d=gd(),fps=aPagar(d.transacoes),fats=getFatPend(d.cartoes,d.transacoes),parcDiv2=getParcelasDividaPend();var el=document.getElementById('lista-apagar');if(!el)return;el.innerHTML='';if(fps.length===0&&fats.length===0&&parcDiv2.length===0){el.innerHTML='<div class="tx-empty">Tudo em dia!</div>';abM('sh-apagar');return;}var hj=hoje0(),atrasadas=[],deHoje=[],futuras=[];fps.forEach(function(t){var diff=Math.round((dataD(t.data)-hj)/(864e5));if(diff<0)atrasadas.push({tipo:'tx',t:t,diff:diff});else if(diff===0)deHoje.push({tipo:'tx',t:t,diff:0});else futuras.push({tipo:'tx',t:t,diff:diff});});fats.forEach(function(f){var diff=Math.round((dataD(f.dataVenc)-hj)/(864e5));if(diff<0)atrasadas.push({tipo:'fat',f:f,diff:diff});else if(diff===0)deHoje.push({tipo:'fat',f:f,diff:0});else futuras.push({tipo:'fat',f:f,diff:diff});});parcDiv2.forEach(function(p){var diff=Math.round((dataD(p.dataVenc)-hj)/(864e5));if(diff<0)atrasadas.push({tipo:'divparc',p:p,diff:diff});else if(diff===0)deHoje.push({tipo:'divparc',p:p,diff:0});else futuras.push({tipo:'divparc',p:p,diff:diff});});
+atrasadas.sort(function(a,b){return a.diff-b.diff;});futuras.sort(function(a,b){return a.diff-b.diff;});
+function mkItem(item,cor){var row=document.createElement('div');row.className='tx-item';var diff=item.diff,dataStr=diff<0?'Atrasado '+Math.abs(diff)+' dia(s)':diff===0?'Hoje':fData(item.tipo==='fat'?item.f.dataVenc:item.tipo==='divparc'?item.p.dataVenc:item.t.data);var ic=document.createElement('div');ic.className='tx-icone';var nome='',valor=0;if(item.tipo==='fat'){var cO=d.cartoes.find(function(x){return x.id===item.f.cartaoId;})||{};var b=banco(cO.banco||'outro');ic.style.cssText='background:'+b.cor+'22;color:'+b.cor;ic.innerHTML='&#x1F4B3;';nome='Fatura '+item.f.cartaoNome;valor=item.f.valor;}else if(item.tipo==='divparc'){ic.style.cssText='background:rgba(248,113,113,.15);color:#f87171';ic.innerHTML='&#x26A0;';nome='Parcela '+item.p.parcAtual+'/'+item.p.parcTotal+' - '+item.p.credor;valor=item.p.valor;}else{var cat=getCat(item.t.cat);ic.style.cssText='background:'+cat.cor+'22;color:'+cat.cor;ic.innerHTML=cat.ic;nome=item.t.desc+(item.t.parcTotal?' ('+item.t.parcAtual+'/'+item.t.parcTotal+')':'');valor=item.t.valor;}var info=document.createElement('div');info.className='tx-info';info.innerHTML='<div class="tx-nome">'+nome+'</div><div class="tx-cat" style="color:'+cor+'">'+dataStr+'</div>';var right=document.createElement('div');right.className='tx-right';var vEl=document.createElement('div');vEl.className='tx-valor';vEl.textContent=fR(valor);var btn=document.createElement('button');btn.className='pagar-btn '+(diff<0?'red':diff===0?'yellow':'gray');btn.textContent='Pagar';if(item.tipo==='fat'){btn.addEventListener('click',(function(cid){return function(){confirmarFatura(cid);};})(item.f.cartaoId));}else if(item.tipo==='divparc'){btn.addEventListener('click',(function(pid){return function(){fcM('sh-apagar');abrePagParcelaDivida(pid);};})(item.p.dividaId));}else{btn.addEventListener('click',(function(tid){return function(){fcM('sh-apagar');abrePagTx(tid);};})(item.t.id));}right.appendChild(vEl);right.appendChild(btn);row.appendChild(ic);row.appendChild(info);row.appendChild(right);return row;}
+function mkGrupo(lista,titulo,cor){if(!lista.length)return;var total=lista.reduce(function(a,item){return a+(item.tipo==='tx'?item.t.valor:item.tipo==='divparc'?item.p.valor:item.f.valor);},0);var sec=document.createElement('div');sec.style.marginBottom='14px';var hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';hdr.innerHTML='<span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+' ('+lista.length+')</span><span style="font-size:13px;font-weight:700;color:'+cor+';">'+fR(total)+'</span>';sec.appendChild(hdr);var card=document.createElement('div');card.className='card';card.style.padding='0';lista.forEach(function(item){card.appendChild(mkItem(item,cor));});sec.appendChild(card);el.appendChild(sec);}
 mkGrupo(atrasadas,'Atrasadas','#f87171');mkGrupo(deHoje,'Hoje','#fbbf24');mkGrupo(futuras,'Proximas','#94a3b8');abM('sh-apagar');}
 
 function abrePagos(){var d=gd(),ts=txMes(d.transacoes);var pagos=ts.filter(isPago).sort(function(a,b){return new Date(b.data)-new Date(a.data);});var fatPagas=d.cartoes.filter(function(c){var cf=cicloFechado(c);return c.faturas&&c.faturas[cf.chave];});var el=document.getElementById('lista-pagos');if(!el)return;el.innerHTML='';var totalTx=pagos.reduce(function(a,t){return a+t.valor;},0),totalFat=fatPagas.reduce(function(a,c){var cf=cicloFechado(c);return a+usadoCCCiclo(c,d.transacoes,cf);},0),total=totalTx+totalFat,itens=fatPagas.length+pagos.length;if(itens===0){el.innerHTML='<div class="tx-empty">Nenhum pagamento este mes</div>';abM('sh-pagos');return;}var summ=document.createElement('div');summ.style.cssText='background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';summ.innerHTML='<span style="font-size:12px;color:var(--text2);">'+itens+' lancamentos</span><span style="font-size:16px;font-weight:300;color:var(--accent);">'+fR(total)+'</span>';el.appendChild(summ);var card=document.createElement('div');card.className='card';fatPagas.forEach(function(c){var cf=cicloFechado(c),chv=cf.chave,us=usadoCCCiclo(c,d.transacoes,cf),at=c.faturasAtraso&&c.faturasAtraso[chv],b=banco(c.banco);var row=document.createElement('div');row.className='tx-item';row.innerHTML='<div class="tx-icone" style="background:'+b.cor+'22;color:'+b.cor+'">&#x1F4B3;</div><div class="tx-info"><div class="tx-nome">Fatura '+(c.nome||b.nome)+'</div><div class="tx-cat">Cartao <span class="'+(at?'badge-atraso':'badge-pago')+'">'+(at?'Pago em atraso '+fData(c.faturas[chv]):'Pago '+fData(c.faturas[chv]))+'</span></div></div><div class="tx-right"><div class="tx-valor r">-'+fR(us)+'</div></div>';card.appendChild(row);});pagos.forEach(function(t){card.appendChild(mkTxItem(t));});el.appendChild(card);abM('sh-pagos');}
@@ -531,17 +839,14 @@ function deletaCartaoEdit(){if(!editCartaoId)return;if(!confirm('Excluir cartao?
 // METAS
 function bMetaCatGrid(){var e=document.getElementById('meta-cat-grid');if(!e)return;e.innerHTML=META_CATS.map(function(c){return'<div style="text-align:center;cursor:pointer;padding:8px 4px;border-radius:10px;border:1.5px solid '+(metaCatSel===c.id?c.cor:'transparent')+';background:'+(metaCatSel===c.id?c.cor+'22':'transparent')+'" onclick="selMetaCat(\''+c.id+'\')"><div style="font-size:20px;margin-bottom:3px;">'+c.ic+'</div><div style="font-size:10px;color:'+(metaCatSel===c.id?c.cor:'var(--text3)')+'">'+c.nome+'</div></div>';}).join('');}
 function selMetaCat(id){metaCatSel=id;bMetaCatGrid();}
-
 function abreNovaMeta(){editMetaId=null;metaCatSel='outros';var e;e=document.getElementById('mt-nome');if(e)e.value='';e=document.getElementById('mt-alvo');if(e)e.value='';e=document.getElementById('mt-atual');if(e)e.value='';e=document.getElementById('mt-data');if(e)e.value='';e=document.getElementById('sh-meta-title');if(e)e.textContent='Nova Meta';e=document.getElementById('btn-salva-meta');if(e)e.textContent='Criar Meta';e=document.getElementById('btn-del-meta');if(e)e.style.display='none';bMetaCatGrid();abM('sh-meta');}
 function abreEditMeta(id){var d=gd(),m=d.metas.find(function(x){return x.id===id;});if(!m)return;editMetaId=id;metaCatSel=m.cat||'outros';var e;e=document.getElementById('mt-nome');if(e)e.value=m.nome||'';e=document.getElementById('mt-alvo');if(e)e.value=fR(m.alvo||0).replace('R$ ','');e=document.getElementById('mt-atual');if(e)e.value=fR(m.atual||0).replace('R$ ','');e=document.getElementById('mt-data');if(e)e.value=m.data||'';e=document.getElementById('sh-meta-title');if(e)e.textContent='Editar Meta';e=document.getElementById('btn-salva-meta');if(e)e.textContent='Salvar';e=document.getElementById('btn-del-meta');if(e)e.style.display='block';bMetaCatGrid();abM('sh-meta');}
 function salvaMeta(){var nome=document.getElementById('mt-nome').value.trim(),alvo=pv('mt-alvo'),atual=pv('mt-atual'),data=document.getElementById('mt-data').value;if(!nome){toast('Informe o nome','err');return;}if(!alvo){toast('Informe o objetivo','err');return;}if(!data){toast('Informe a data limite','err');return;}var d=gd();if(editMetaId){var m=d.metas.find(function(x){return x.id===editMetaId;});if(m){m.cat=metaCatSel;m.nome=nome;m.alvo=alvo;m.atual=atual;m.data=data;}toast('Meta atualizada!','ok');}else{d.metas.push({id:uid(),cat:metaCatSel,nome:nome,alvo:alvo,atual:atual,data:data,historico:[]});toast('Meta criada!','ok');}save(d);fcM('sh-meta');editMetaId=null;renderPag();}
 function deletaMetaEdit(){if(!editMetaId)return;if(!confirm('Excluir meta?'))return;var d=gd();d.metas=d.metas.filter(function(m){return m.id!==editMetaId;});save(d);fcM('sh-meta');editMetaId=null;toast('Meta excluida!','ok');renderPag();}
-
 function abreAporte(idx){aporteIdx=idx;var d=gd(),m=d.metas[idx];if(!m)return;document.getElementById('aporte-title').textContent='Aportar: '+m.nome;document.getElementById('aporte-val').value='';var sel=document.getElementById('aporte-conta');if(sel){sel.innerHTML=d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');if(!d.contas.length)sel.innerHTML='<option value="">Sem contas cadastradas</option>';}abM('sh-aporte');}
-function salvaAporte(){var v=pv('aporte-val');if(!v||v<=0){toast('Informe o valor','err');return;}var contaId=document.getElementById('aporte-conta').value;var d=gd(),m=d.metas[aporteIdx];if(!m)return;if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c){if((c.saldo||0)<v){toast('Saldo insuficiente','err');return;}c.saldo-=v;}}m.atual=(m.atual||0)+v;if(!m.historico)m.historico=[];var b=contaId?d.contas.find(function(x){return x.id===contaId;}):null;m.historico.push({tipo:'aporte',valor:v,data:new Date().toISOString().split('T')[0],conta:b?( b.nome||banco(b.banco).nome):''});save(d);fcM('sh-aporte');toast('Aporte registrado!','ok');renderPag();}
-
+function salvaAporte(){var v=pv('aporte-val');if(!v||v<=0){toast('Informe o valor','err');return;}var contaId=document.getElementById('aporte-conta').value;var d=gd(),m=d.metas[aporteIdx];if(!m)return;if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c){if((c.saldo||0)<v){toast('Saldo insuficiente','err');return;}c.saldo-=v;}}m.atual=(m.atual||0)+v;if(!m.historico)m.historico=[];var b=contaId?d.contas.find(function(x){return x.id===contaId;}):null;m.historico.push({tipo:'aporte',valor:v,data:new Date().toISOString().split('T')[0],conta:b?(b.nome||banco(b.banco).nome):''});save(d);fcM('sh-aporte');toast('Aporte registrado!','ok');renderPag();}
 function abreResgate(idx){resgateIdx=idx;var d=gd(),m=d.metas[idx];if(!m)return;document.getElementById('resgate-title').textContent='Resgatar: '+m.nome;document.getElementById('resgate-val').value='';var sel=document.getElementById('resgate-conta');if(sel){sel.innerHTML=d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+'</option>';}).join('');if(!d.contas.length)sel.innerHTML='<option value="">Sem contas cadastradas</option>';}abM('sh-resgate');}
-function salvaResgate(){var v=pv('resgate-val');if(!v||v<=0){toast('Informe o valor','err');return;}var contaId=document.getElementById('resgate-conta').value;var d=gd(),m=d.metas[resgateIdx];if(!m)return;if(v>( m.atual||0)){toast('Valor maior que o disponivel','err');return;}if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c)c.saldo+=v;}m.atual=(m.atual||0)-v;if(!m.historico)m.historico=[];var b=contaId?d.contas.find(function(x){return x.id===contaId;}):null;m.historico.push({tipo:'resgate',valor:v,data:new Date().toISOString().split('T')[0],conta:b?(b.nome||banco(b.banco).nome):''});save(d);fcM('sh-resgate');toast('Resgate realizado!','ok');renderPag();}
+function salvaResgate(){var v=pv('resgate-val');if(!v||v<=0){toast('Informe o valor','err');return;}var contaId=document.getElementById('resgate-conta').value;var d=gd(),m=d.metas[resgateIdx];if(!m)return;if(v>(m.atual||0)){toast('Valor maior que o disponivel','err');return;}if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c)c.saldo+=v;}m.atual=(m.atual||0)-v;if(!m.historico)m.historico=[];var b=contaId?d.contas.find(function(x){return x.id===contaId;}):null;m.historico.push({tipo:'resgate',valor:v,data:new Date().toISOString().split('T')[0],conta:b?(b.nome||banco(b.banco).nome):''});save(d);fcM('sh-resgate');toast('Resgate realizado!','ok');renderPag();}
 
 function salvaOrc(){if(!orcCatSel){toast('Selecione categoria','err');return;}var v=pv('orc-val');if(!v){toast('Informe o valor','err');return;}var d=gd();d.orcamentos[orcCatSel]=v;save(d);fcM('sh-orc');toast('Orcamento salvo!','ok');renderPag();}
 function abCats(){catTipo='gasto';var bg=document.getElementById('btn-cats-g'),br=document.getElementById('btn-cats-r');if(bg){bg.className='tbtn ativo-d';br.className='tbtn';}rLC();abM('sh-cats');}

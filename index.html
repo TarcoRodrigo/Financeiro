@@ -40,9 +40,9 @@
       <div class="ni-ic">&#x1F4B3;</div>
       <div class="ni-lb">Cartoes<div class="nav-dot"></div></div>
     </button>
-    <button class="ni" data-p="relatorios" onclick="nav('relatorios')">
-      <div class="ni-ic">&#x1F4CA;</div>
-      <div class="ni-lb">Resumo<div class="nav-dot"></div></div>
+    <button class="ni" data-p="dividas" onclick="nav('dividas')">
+      <div class="ni-ic">&#x26A0;</div>
+      <div class="ni-lb">Dividas<div class="nav-dot"></div></div>
     </button>
   </nav>
   <button class="nav-fab" onclick="abTx('despesa',false)">+</button>
@@ -249,6 +249,140 @@
   </div>
 </div>
 
+<!-- SHEET DIVIDA -->
+<div class="sheet" id="sh-div">
+  <div class="sheet-handle"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="sheet-title" id="sh-div-title">Nova Divida</div>
+    <button id="btn-del-div" onclick="deletaDivida()" style="display:none;background:rgba(248,113,113,.12);color:var(--red);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;border:none;">Excluir</button>
+  </div>
+
+  <label class="form-label">Credor (quem voce deve)</label>
+  <input type="text" id="div-credor" placeholder="Ex: Banco Itau, Nubank, Maria...">
+
+  <label class="form-label">Categoria</label>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;" id="div-cat-grid"></div>
+
+  <label class="form-label">Situacao</label>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;" id="div-status-grid"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div>
+      <label class="form-label">Valor original (R$)</label>
+      <input type="text" id="div-valor-orig" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+    </div>
+    <div>
+      <label class="form-label">Valor atual c/juros</label>
+      <input type="text" id="div-valor-atual" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+    </div>
+  </div>
+
+  <label class="form-label">Data de vencimento original</label>
+  <input type="date" id="div-venc">
+
+  <label class="form-label">Observacoes</label>
+  <input type="text" id="div-obs" placeholder="Opcional...">
+
+  <!-- SECAO ACORDO (visivel ao editar divida com acordo) -->
+  <div id="div-acordo-sec" style="display:none;margin-top:10px;">
+    <div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:10px;padding:8px 12px;background:rgba(96,165,250,.1);border-radius:8px;">&#x1F91D; Acordo ativo cadastrado</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label class="form-label">Valor negociado (R$)</label>
+        <input type="text" id="div-ac-total" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
+      </div>
+      <div>
+        <label class="form-label">Parcelas</label>
+        <input type="number" id="div-ac-parc" placeholder="Ex: 12" min="1" oninput="calcValParc()">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label class="form-label">Valor por parcela</label>
+        <input type="text" id="div-ac-valparc" inputmode="numeric" placeholder="0,00" oninput="mask(this)" readonly style="opacity:.7;">
+      </div>
+      <div>
+        <label class="form-label">Dia do vencimento</label>
+        <input type="number" id="div-ac-dia" placeholder="Ex: 10" min="1" max="31">
+      </div>
+    </div>
+    <label class="form-label">Proxima parcela</label>
+    <input type="date" id="div-ac-primeiro">
+    <label class="form-label">Protocolo / N do acordo</label>
+    <input type="text" id="div-protocolo" placeholder="Opcional...">
+  </div>
+
+  <div style="height:14px;"></div>
+  <button class="sbtn" id="btn-salva-div" onclick="salvaDivida()">Cadastrar Divida</button>
+  <button onclick="fcM('sh-div')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
+<!-- SHEET ACORDO -->
+<div class="sheet" id="sh-acordo">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Registrar Acordo</div>
+
+  <div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:12px;margin-bottom:16px;">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Divida com</div>
+    <div style="font-size:15px;font-weight:600;" id="sh-acordo-credor">-</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:2px;">Valor em aberto: <span id="sh-acordo-orig" style="color:#f87171;font-weight:600;">-</span></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div>
+      <label class="form-label">Valor negociado (R$)</label>
+      <input type="text" id="ac-total" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
+    </div>
+    <div>
+      <label class="form-label">Desconto obtido (R$)</label>
+      <input type="text" id="ac-desc" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div>
+      <label class="form-label">Numero de parcelas</label>
+      <input type="number" id="ac-parc" placeholder="Ex: 12" min="1" oninput="calcValParc()">
+    </div>
+    <div>
+      <label class="form-label">Valor por parcela</label>
+      <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" readonly style="opacity:.7;">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div>
+      <label class="form-label">Dia venc. mensal</label>
+      <input type="number" id="ac-dia" placeholder="Ex: 10" min="1" max="31">
+    </div>
+    <div>
+      <label class="form-label">Data 1a parcela</label>
+      <input type="date" id="ac-primeiro">
+    </div>
+  </div>
+
+  <label class="form-label">Protocolo / N do acordo (opcional)</label>
+  <input type="text" id="ac-protocolo" placeholder="Ex: 2024-ABC-12345">
+
+  <div style="height:14px;"></div>
+  <button class="sbtn" style="background:#60a5fa;color:#000;" onclick="salvaAcordo()">Confirmar Acordo</button>
+  <button onclick="fcM('sh-acordo')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
+<!-- SHEET PAGAR PARCELA DIVIDA -->
+<div class="sheet" id="sh-pag-div">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Pagar Parcela</div>
+  <div id="pag-div-info" style="background:var(--bg3);border-radius:var(--rsm);padding:14px;margin-bottom:16px;"></div>
+  <label class="form-label">Data do pagamento</label>
+  <input type="date" id="pag-div-data">
+  <label class="form-label">Descontar da conta</label>
+  <select id="pag-div-conta"></select>
+  <div style="height:14px;"></div>
+  <button class="sbtn" onclick="confirmaPagParcelaDivida()">Confirmar Pagamento</button>
+  <button onclick="fcM('sh-pag-div')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
 <!-- DRAWER -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="fechaDrawer()"></div>
 <div class="drawer" id="drawer">
@@ -260,13 +394,14 @@
   <div class="drawer-item" onclick="abreNovaConta();fechaDrawer()">&#x1F3E6; Nova conta</div>
   <div class="drawer-item" onclick="abreNovoCartao();fechaDrawer()">&#x1F4B3; Novo cartao</div>
   <div class="drawer-item" onclick="abreNovaMeta();fechaDrawer()">&#x1F3AF; Nova meta</div>
+  <div class="drawer-item" onclick="abreNovaDivida();fechaDrawer()">&#x26A0; Nova divida</div>
   <div class="drawer-item" onclick="abM('sh-orc');fechaDrawer()">&#x1F4B0; Orcamentos</div>
   <div class="drawer-item" onclick="abCats();fechaDrawer()">&#x1F3F7; Categorias</div>
   <div class="drawer-item" onclick="exportaDados();fechaDrawer()">&#x1F4E4; Exportar dados</div>
   <div class="drawer-item" onclick="document.getElementById('imp-input').click()">&#x1F4E5; Importar dados</div>
   <input type="file" id="imp-input" accept=".json" style="display:none" onchange="importaDados(this)">
   <div class="drawer-item" onclick="limpaDados()" style="color:var(--red);">&#x1F5D1; Limpar dados</div>
-  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.3</div>
+  <div style="margin-top:20px;font-size:11px;color:var(--text3);text-align:center;">v8.4</div>
 </div>
 <script src="app.js"></script>
 </body>
