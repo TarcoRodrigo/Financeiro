@@ -712,16 +712,16 @@ function rRelatorio(el){
     if(Math.max(mr2,md2)>mxV)mxV=Math.max(mr2,md2);
   }
   var barsH=80,barsW='100%';
-  var barsDiv=document.createElement('div');barsDiv.style.cssText='display:flex;gap:4px;align-items:flex-end;height:'+barsH+'px;margin-bottom:6px;';
+  var barsDiv=document.createElement('div');barsDiv.style.cssText='display:flex;gap:10px;align-items:flex-end;height:'+barsH+'px;margin-bottom:6px;';
   mds.forEach(function(m){
     var hR=mxV>0?Math.max(3,Math.round((m.r/mxV)*(barsH-4))):3;
     var hD=mxV>0?Math.max(3,Math.round((m.d/mxV)*(barsH-4))):3;
-    var grp=document.createElement('div');grp.style.cssText='flex:1;display:flex;gap:2px;align-items:flex-end;';
-    var bR=document.createElement('div');bR.style.cssText='flex:1;height:'+hR+'px;background:#3ecf8e;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
-    var bD=document.createElement('div');bD.style.cssText='flex:1;height:'+hD+'px;background:#f87171;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
+    var grp=document.createElement('div');grp.style.cssText='flex:1;display:flex;gap:3px;align-items:flex-end;justify-content:center;';
+    var bR=document.createElement('div');bR.style.cssText='width:8px;height:'+hR+'px;background:#3ecf8e;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
+    var bD=document.createElement('div');bD.style.cssText='width:8px;height:'+hD+'px;background:#f87171;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
     grp.appendChild(bR);grp.appendChild(bD);barsDiv.appendChild(grp);
   });
-  var labelsDiv=document.createElement('div');labelsDiv.style.cssText='display:flex;gap:4px;margin-bottom:8px;';
+  var labelsDiv=document.createElement('div');labelsDiv.style.cssText='display:flex;gap:10px;margin-bottom:8px;';
   mds.forEach(function(m){var l=document.createElement('div');l.style.cssText='flex:1;font-size:9px;color:'+(m.atual?'var(--accent)':'var(--text3)')+';text-align:center;';l.textContent=m.l;labelsDiv.appendChild(l);});
   var legDiv=document.createElement('div');legDiv.style.cssText='display:flex;gap:14px;';
   legDiv.innerHTML='<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:10px;height:10px;border-radius:2px;background:#3ecf8e;"></div>Receitas</div><div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:10px;height:10px;border-radius:2px;background:#f87171;"></div>Despesas</div>';
