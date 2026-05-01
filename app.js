@@ -1313,6 +1313,13 @@ function toast(msg,tipo){var e=document.getElementById('toast');if(!e)return;e.t
 
 try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}
 document.getElementById('mesLabel').textContent=MC[mes]+'/'+ano;
+// Event listeners para botoes inline que nao funcionam bem no PWA
+(function(){
+  var btnDel=document.getElementById('btn-del-tx');
+  if(btnDel)btnDel.addEventListener('click',function(){deletaTx();});
+  var btnPagTx=document.getElementById('btn-pagar-tx');
+  if(btnPagTx)btnPagTx.addEventListener('click',function(){marcarPagoTx();});
+})();
 // Inicializa ultimoBackup se nao existir
 (function(){var d=gd();if(!d.ultimoBackup){d.ultimoBackup=new Date().toISOString();save(d);}})();
 pushState('app');
