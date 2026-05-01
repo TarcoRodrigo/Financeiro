@@ -402,6 +402,25 @@
   <button onclick="fcM('sh-transf')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
 </div>
 
+
+
+<!-- SHEET CONFIG BACKUP -->
+<div class="sheet" id="sh-backup">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Backup Automatico</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6;">
+    Quando chegar o prazo, um aviso aparece na tela principal pedindo para exportar os dados. O arquivo JSON pode ser reimportado pelo app a qualquer momento.
+  </div>
+  <label class="form-label">Frequencia</label>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;" id="backup-freq-grid"></div>
+  <label class="form-label">Nome do arquivo</label>
+  <input type="text" id="backup-nome" placeholder="Ex: meus-dados, financex, rodrigo" maxlength="40">
+  <div style="font-size:10px;color:var(--text3);margin-top:6px;margin-bottom:16px;">O arquivo sera salvo como: <span id="backup-preview" style="color:var(--accent);font-weight:600;"></span></div>
+  <div id="backup-ultimo" style="font-size:11px;color:var(--text3);margin-bottom:16px;padding:10px 12px;background:var(--bg3);border-radius:10px;"></div>
+  <button class="sbtn" onclick="salvaConfigBackup()">Salvar</button>
+  <button onclick="fcM('sh-backup')" style="width:100%;padding:12px;background:none;color:var(--text3);font-size:13px;margin-top:8px;border:none;">Cancelar</button>
+</div>
+
 <!-- DRAWER -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="fechaDrawer()"></div>
 <div class="drawer" id="drawer">
@@ -417,6 +436,7 @@
   <div class="drawer-item" onclick="abreTransferencia();fechaDrawer()">&#x21C4; Transferencia entre contas</div>
   <div class="drawer-item" onclick="abM('sh-orc');fechaDrawer()">&#x1F4B0; Orcamentos</div>
   <div class="drawer-item" onclick="abCats();fechaDrawer()">&#x1F3F7; Categorias</div>
+  <div class="drawer-item" onclick="abreConfigBackup();fechaDrawer()">&#x1F4BE; Backup automatico</div>
   <div class="drawer-item" onclick="exportaDados();fechaDrawer()">&#x1F4E4; Exportar dados</div>
   <div class="drawer-item" onclick="document.getElementById('imp-input').click()">&#x1F4E5; Importar dados</div>
   <input type="file" id="imp-input" accept=".json" style="display:none" onchange="importaDados(this)">

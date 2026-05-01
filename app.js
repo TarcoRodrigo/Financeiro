@@ -1083,9 +1083,20 @@ function salvaNovaCat(){var nome=document.getElementById('nova-cat').value.trim(
 function abreDrawer(){document.getElementById('drawer').style.right='0';document.getElementById('drawer-overlay').style.display='block';var pt=document.getElementById('priv-toggle');if(pt)pt.checked=privado;pushState('drawer');}
 function fechaDrawer(){document.getElementById('drawer').style.right='-320px';document.getElementById('drawer-overlay').style.display='none';}
 function setPriv(on){privado=on;renderPag();}
-function exportaDados(){var blob=new Blob([JSON.stringify(gd(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='financex_'+new Date().toISOString().split('T')[0]+'.json';a.click();URL.revokeObjectURL(url);var d2=gd();d2.ultimoBackup=new Date().toISOString();save(d2);toast('Exportado!','ok');}
+function exportaDados(){
+  var d=gd();
+  var cfg=d.backupConfig||{};
+  var nome=(cfg.nomeArquivo||'financex').replace(/[^a-zA-Z0-9\-_]/g,'-').replace(/-+/g,'-');
+  var nomeArq=nome+'-'+new Date().toISOString().split('T')[0]+'.json';
+  var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=nomeArq;a.click();URL.revokeObjectURL(url);
+  d.ultimoBackup=new Date().toISOString();save(d);
+  toast('Salvo como '+nomeArq,'ok');
+}
 function importaDados(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var novo=JSON.parse(e.target.result);if(!novo.transacoes&&!novo.contas){toast('Arquivo invalido','err');return;}var atual=gd();var ids={};atual.transacoes.forEach(function(t){ids[t.id]=true;});var add=0;(novo.transacoes||[]).forEach(function(t){if(!ids[t.id]){atual.transacoes.push(t);add++;}});['contas','cartoes','metas'].forEach(function(k){var kids={};atual[k].forEach(function(x){kids[x.id]=true;});(novo[k]||[]).forEach(function(x){if(!kids[x.id])atual[k].push(x);});});save(atual);toast(add+' lancamentos importados!','ok');fechaDrawer();renderPag();}catch(err){toast('Erro ao importar','err');}};reader.readAsText(file);}
 function limpaDados(){if(!confirm('Apagar TODOS os dados?'))return;if(!confirm('Tem certeza?'))return;localStorage.removeItem('fx3');toast('Dados apagados!','ok');fechaDrawer();renderPag();}
+
 // TRANSFERENCIA ENTRE CONTAS
 function abreTransferencia(){
   var d=gd();
@@ -1123,23 +1134,103 @@ function salvaTransferencia(){
 }
 
 // BACKUP LEMBRETE
-var BACKUP_INTERVAL_DAYS=7;
+var BACKUP_OPCOES=[
+  {id:'desativado',nome:'Desativado',ic:'&#x1F515;',dias:0},
+  {id:'diario',nome:'Diario',ic:'&#x1F4C5;',dias:1},
+  {id:'semanal',nome:'Semanal',ic:'&#x1F5D3;',dias:7},
+  {id:'mensal',nome:'Mensal',ic:'&#x1F4C6;',dias:30}
+];
+var backupFreqSel='semanal';
+
+function getBackupConfig(){var d=gd();return d.backupConfig||{freq:'semanal',ultimoBackup:null};}
+function salvaBackupConfig(freq){var d=gd();if(!d.backupConfig)d.backupConfig={};d.backupConfig.freq=freq;save(d);}
+
 function checkBackup(){
   try{
+    var cfg=getBackupConfig();
+    if(cfg.freq==='desativado')return;
+    var opc=BACKUP_OPCOES.find(function(o){return o.id===cfg.freq;})||BACKUP_OPCOES[2];
+    if(opc.dias===0)return;
     var d=gd(),ultima=d.ultimoBackup?new Date(d.ultimoBackup):null;
-    if(!ultima){return;}
+    if(!ultima)return;
     var diff=Math.round((new Date()-ultima)/(864e5));
-    if(diff>=BACKUP_INTERVAL_DAYS){
+    if(diff>=opc.dias){
       var al=document.getElementById('backup-alert');
       if(al)al.style.display='flex';
     }
   }catch(e){}
 }
+
 function exportaDadosBackup(){
   exportaDados();
-  var d=gd();d.ultimoBackup=new Date().toISOString();save(d);
   var al=document.getElementById('backup-alert');if(al)al.style.display='none';
   fechaDrawer();
+}
+
+function abreConfigBackup(){
+  var cfg=getBackupConfig();
+  backupFreqSel=cfg.freq||'semanal';
+  var d=gd(),ultima=d.ultimoBackup?new Date(d.ultimoBackup):null;
+  var elUlt=document.getElementById('backup-ultimo');
+  if(elUlt){
+    if(ultima){
+      var diff=Math.round((new Date()-ultima)/(864e5));
+      elUlt.textContent='Ultimo backup: '+fData(ultima.toISOString().split('T')[0])+(diff===0?' (hoje)':' (ha '+diff+' dia(s))');
+    } else {
+      elUlt.textContent='Nenhum backup realizado ainda';
+    }
+  }
+  var elNome=document.getElementById('backup-nome');
+  if(elNome){
+    elNome.value=cfg.nomeArquivo||'financex';
+    elNome.addEventListener('input',atualizaPreviewBackup);
+  }
+  atualizaPreviewBackup();
+  bBackupFreqGrid();
+  abM('sh-backup');
+}
+
+function atualizaPreviewBackup(){
+  var elNome=document.getElementById('backup-nome');
+  var elPrev=document.getElementById('backup-preview');
+  if(!elPrev)return;
+  var nome=(elNome?elNome.value.trim():'financex')||'financex';
+  nome=nome.replace(/[^a-zA-Z0-9\-_]/g,'-').replace(/-+/g,'-');
+  var hoje=new Date().toISOString().split('T')[0];
+  elPrev.textContent=nome+'-'+hoje+'.json';
+}
+
+function bBackupFreqGrid(){
+  var el=document.getElementById('backup-freq-grid');if(!el)return;
+  el.innerHTML='';
+  BACKUP_OPCOES.forEach(function(o){
+    var sel=backupFreqSel===o.id;
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;cursor:pointer;border:1.5px solid '+(sel?'var(--accent)':'var(--border)')+';background:'+(sel?'rgba(0,201,167,.08)':'var(--bg3)')+';';
+    row.innerHTML='<span style="font-size:20px;">'+o.ic+'</span>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:'+(sel?'var(--accent)':'var(--text)')+';">'+o.nome+'</div>'
+      +(o.dias>0?'<div style="font-size:10px;color:var(--text3);">A cada '+o.dias+(o.dias===1?' dia':' dias')+'</div>':'<div style="font-size:10px;color:var(--text3);">Sem lembretes</div>')
+      +'</div>'
+      +'<div style="width:18px;height:18px;border-radius:50%;border:2px solid '+(sel?'var(--accent)':'var(--border)')+';background:'+(sel?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;">'
+      +(sel?'<div style="width:8px;height:8px;border-radius:50%;background:#000;"></div>':'')
+      +'</div>';
+    row.addEventListener('click',(function(id){return function(){backupFreqSel=id;bBackupFreqGrid();};})(o.id));
+    el.appendChild(row);
+  });
+}
+
+function salvaConfigBackup(){
+  var elNome=document.getElementById('backup-nome');
+  var nome=(elNome?elNome.value.trim():'financex')||'financex';
+  nome=nome.replace(/[^a-zA-Z0-9\-_]/g,'-').replace(/-+/g,'-');
+  var d=gd();
+  if(!d.backupConfig)d.backupConfig={};
+  d.backupConfig.freq=backupFreqSel;
+  d.backupConfig.nomeArquivo=nome;
+  save(d);
+  fcM('sh-backup');
+  var opc=BACKUP_OPCOES.find(function(o){return o.id===backupFreqSel;});
+  toast('Backup '+(opc?opc.nome.toLowerCase():'')+(backupFreqSel==='desativado'?' ativado':' configurado')+'!','ok');
 }
 
 function toast(msg,tipo){var e=document.getElementById('toast');if(!e)return;e.textContent=msg;e.className='toast '+(tipo||'ok')+' show';clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show');},2800);}
