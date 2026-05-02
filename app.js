@@ -732,13 +732,14 @@ function rDividas(el){
 
     // Acoes
     if(div.status!=='quitada'){
-      var acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:8px;';
+      var acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
       if(!div.acordo||!div.acordo.ativo){
         var bAc=document.createElement('button');bAc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bAc.innerHTML='🤝 Acordo';bAc.addEventListener('click',(function(id){return function(){abreAcordo(id);};})(div.id));acoes.appendChild(bAc);
       } else {
         var bPc=document.createElement('button');bPc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPc.innerHTML='💵 Pagar parcela';bPc.addEventListener('click',(function(id){return function(){abrePagParcelaDivida(id);};})(div.id));acoes.appendChild(bPc);
       }
-      var bQ=document.createElement('button');bQ.style.cssText='padding:8px 12px;background:rgba(74,222,128,.1);color:#00d4ff;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bQ.innerHTML='✓ Quitar';bQ.addEventListener('click',(function(id){return function(){quitarDivida(id);};})(div.id));acoes.appendChild(bQ);
+      var bPag=document.createElement('button');bPag.style.cssText='flex:1;padding:8px;background:rgba(255,170,0,.1);color:var(--yellow);border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPag.innerHTML='💰 Pagamento';bPag.addEventListener('click',(function(id){return function(){abreRegistroPagamentoDivida(id);};})(div.id));acoes.appendChild(bPag);
+      var bQ=document.createElement('button');bQ.style.cssText='padding:8px 12px;background:rgba(74,222,128,.1);color:#4ade80;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bQ.innerHTML='✓ Quitar';bQ.addEventListener('click',(function(id){return function(){quitarDivida(id);};})(div.id));acoes.appendChild(bQ);
       card.appendChild(acoes);
     }
 
@@ -910,6 +911,66 @@ function quitarDivida(id){
   save(d);toast('Divida quitada!','ok');renderPag();
 }
 
+function abreRegistroPagamentoDivida(id){
+  editDividaId=id;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
+  if(!div)return;
+  var valorAtual=div.valorAtual||div.valorOriginal||0;
+  var info=document.getElementById('pag-div-info');
+  if(info)info.innerHTML='<div style="font-size:14px;font-weight:600;margin-bottom:4px;">'+div.credor+'</div>'
+    +'<div style="font-size:13px;color:var(--text3);margin-bottom:4px;">Saldo devedor: <span style="color:var(--red);font-weight:600;">'+fR(valorAtual)+'</span></div>'
+    +'<div style="font-size:11px;color:var(--text3);">Informe o valor que sera pago agora</div>';
+  var dp=document.getElementById('pag-div-data');if(dp)dp.value=new Date().toISOString().split('T')[0];
+  var sel=document.getElementById('pag-div-conta');
+  if(sel){
+    sel.innerHTML='<option value="">Nao descontar de nenhuma conta</option>'
+      +d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');
+  }
+  var elVal=document.getElementById('pag-div-val');
+  var elLbl=document.getElementById('lbl-pag-div-val');
+  if(elVal){elVal.value='';elVal.readOnly=false;elVal.style.opacity='1';}
+  if(elLbl)elLbl.textContent='Valor pago (R$)';
+  var tit=document.getElementById('sh-pag-div-title');if(tit)tit.textContent='Registrar Pagamento';
+  document.getElementById('sh-pag-div').dataset.modo='livre';
+  abM('sh-pag-div');
+}
+
+function confirmaPagParcelaDivida(){
+  var data=document.getElementById('pag-div-data').value;
+  if(!data){toast('Informe a data','err');return;}
+  var contaId=document.getElementById('pag-div-conta').value;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
+  if(!div)return;
+  var modo=document.getElementById('sh-pag-div').dataset.modo||'parcela';
+  var valor=pv('pag-div-val')||0;
+
+  if(modo==='livre'){
+    // Pagamento livre - abate do valor atual
+    if(!valor||valor<=0){toast('Informe o valor pago','err');return;}
+    if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c)c.saldo-=valor;}
+    var novoValor=Math.max(0,(div.valorAtual||div.valorOriginal||0)-valor);
+    div.valorAtual=novoValor;
+    if(!div.historicoPag)div.historicoPag=[];
+    div.historicoPag.push({data:data,valor:valor,conta:contaId});
+    if(novoValor<=0){div.status='quitada';div.dataQuit=data;toast('Divida quitada automaticamente!','ok');}
+    else{toast('Pagamento de '+fR(valor)+' registrado!','ok');}
+    document.getElementById('sh-pag-div').dataset.modo='parcela';
+    save(d);fcM('sh-pag-div');editDividaId=null;renderPag();
+    return;
+  }
+
+  // Modo parcela de acordo (original)
+  if(!div.acordo)return;
+  var ac=div.acordo,parcVal=ac.valorParc;
+  if(contaId){var c2=d.contas.find(function(x){return x.id===contaId;});if(c2)c2.saldo-=parcVal;}
+  if(!ac.parcPagas)ac.parcPagas=[];
+  ac.parcPagas.push({data:data,valor:parcVal,conta:contaId});
+  if(ac.parcPagas.length>=ac.parcTotal){div.status='quitada';div.dataQuit=data;ac.ativo=false;toast('Divida quitada!','ok');}
+  else{var prox=new Date(data+'T12:00:00');prox.setMonth(prox.getMonth()+1);ac.proxVenc=prox.toISOString().split('T')[0];toast('Parcela paga!','ok');}
+  document.getElementById('sh-pag-div').dataset.modo='parcela';
+  save(d);fcM('sh-pag-div');editDividaId=null;renderPag();
+}
+
 // ACORDO
 function abreAcordo(id){
   editDividaId=id;
@@ -950,8 +1011,15 @@ function abrePagParcelaDivida(id){
     +'<div style="font-size:20px;font-weight:300;color:var(--red);letter-spacing:-.5px;margin-bottom:4px;">'+fR(ac.valorParc)+'</div>'
     +'<div style="font-size:11px;color:var(--text3);">Parcela '+parcAtual+' de '+ac.parcTotal+'</div>';
   var dp=document.getElementById('pag-div-data');if(dp)dp.value=new Date().toISOString().split('T')[0];
+  // Preenche valor da parcela automaticamente e bloqueia edicao
+  var elVal=document.getElementById('pag-div-val');
+  var elLbl=document.getElementById('lbl-pag-div-val');
+  if(elVal){elVal.value=fR(ac.valorParc).replace('R$ ','');elVal.readOnly=true;elVal.style.opacity='.6';}
+  if(elLbl)elLbl.textContent='Valor da parcela (R$)';
+  var tit=document.getElementById('sh-pag-div-title');if(tit)tit.textContent='Pagar Parcela';
   var sel=document.getElementById('pag-div-conta');
-  if(sel){sel.innerHTML=d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');if(!d.contas.length)sel.innerHTML='<option value="">Sem conta</option>';}
+  if(sel){sel.innerHTML='<option value="">Nao descontar de nenhuma conta</option>'+d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');}
+  document.getElementById('sh-pag-div').dataset.modo='parcela';
   abM('sh-pag-div');
 }
 

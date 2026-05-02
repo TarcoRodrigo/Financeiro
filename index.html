@@ -371,10 +371,12 @@
 </div>
 
 <!-- SHEET PAGAR PARCELA DIVIDA -->
-<div class="sheet" id="sh-pag-div">
+<div class="sheet" id="sh-pag-div" data-modo="parcela">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Pagar Parcela</div>
+  <div class="sheet-title" id="sh-pag-div-title">Pagar Parcela</div>
   <div id="pag-div-info" style="background:var(--bg3);border-radius:var(--rsm);padding:14px;margin-bottom:16px;"></div>
+  <label class="form-label" id="lbl-pag-div-val">Valor pago (R$)</label>
+  <input type="text" id="pag-div-val" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
   <label class="form-label">Data do pagamento</label>
   <input type="date" id="pag-div-data">
   <label class="form-label">Descontar da conta</label>
