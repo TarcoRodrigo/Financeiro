@@ -92,11 +92,13 @@ function getParcelasDividaPend(){
     if(!ac.parcTotal||!ac.parcPagas)return;
     var restantes=ac.parcTotal-ac.parcPagas.length;
     if(restantes<=0)return;
-    // proxima parcela
     var proxData=ac.proxVenc;
     if(!proxData)return;
-    var diff=Math.round((dataD(proxData)-hj)/(864e5));
-    if(diff<=30){ // mostra proximas dentro de 30 dias
+    // Inclui parcelas do mes atual e atrasadas (sem limite de 30 dias)
+    var vencDate=dataD(proxData);
+    var isMesAtual=vencDate.getMonth()===mes&&vencDate.getFullYear()===ano;
+    var isAtrasada=vencDate<hj;
+    if(isMesAtual||isAtrasada){
       result.push({
         id:'div-parc-'+div.id,
         dividaId:div.id,
@@ -225,15 +227,28 @@ function rInicio(el){
 
   // SAUDE FINANCEIRA
   (function(){
-    var totalDivAtivas=(d.dividas||[]).filter(function(x){return x.status!=='quitada';}).reduce(function(a,x){return a+(x.valorAtual||x.valorOriginal||0);},0);
+    // Parcelas de acordo: verificar atraso e vencimento no mes
+    var hj0=hoje0();
+    var divParcelasAtraso=(d.dividas||[]).filter(function(x){
+      if(x.status==='quitada')return false;
+      if(!x.acordo||!x.acordo.ativo||!x.acordo.proxVenc)return false;
+      return dataD(x.acordo.proxVenc)<hj0;
+    }).length;
+    var divParcelasMes=(d.dividas||[]).filter(function(x){
+      if(x.status==='quitada')return false;
+      if(!x.acordo||!x.acordo.ativo||!x.acordo.proxVenc)return false;
+      var venc=dataD(x.acordo.proxVenc);
+      return venc.getMonth()===mes&&venc.getFullYear()===ano&&venc>=hj0;
+    }).length;
     var score,msg,cor,ic;
     if(rec===0){score='neutral';msg='Sem receitas lancadas este mes';cor='var(--text3)';ic='&#x2014;';}
     else{
       var ratio=depPagoTotal/rec;
-      if(ratio<=0.6&&totalDivAtivas===0){score='great';msg='Financas saudaveis';cor='#00d4ff';ic='&#x2713;';}
-      else if(ratio<=0.6){score='ok';msg='Bom, mas ha dividas em aberto';cor='#00d4ff';ic='&#x26A0;';}
-      else if(ratio<=0.85){score='warn';msg='Atencao: gastos altos este mes';cor='var(--yellow)';ic='&#x26A0;';}
-      else{score='bad';msg='Gastos acima de 85% das receitas';cor='var(--red)';ic='&#x2715;';}
+      if(divParcelasAtraso>0){score='bad';msg='Parcela(s) de acordo em atraso!';cor='var(--red)';ic='&#x2715;';}
+      else if(ratio>0.85){score='bad';msg='Gastos acima de 85% das receitas';cor='var(--red)';ic='&#x2715;';}
+      else if(ratio>0.6){score='warn';msg='Atencao: gastos altos este mes';cor='var(--yellow)';ic='&#x26A0;';}
+      else if(divParcelasMes>0){score='ok';msg='Financas ok · '+divParcelasMes+' parcela(s) vencem este mes';cor='var(--yellow)';ic='&#x26A0;';}
+      else{score='great';msg='Financas saudaveis';cor='#00d4ff';ic='&#x2713;';}
     }
     var sf=document.createElement('div');
     sf.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:'+cor+'15;border-radius:20px;margin-bottom:16px;border:1px solid '+cor+'33;';
