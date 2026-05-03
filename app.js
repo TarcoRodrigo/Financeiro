@@ -250,9 +250,10 @@ function rInicio(el){
       else if(divParcelasMes>0){score='ok';msg='Financas ok · '+divParcelasMes+' parcela(s) vencem este mes';cor='var(--yellow)';ic='&#x26A0;';}
       else{score='great';msg='Financas saudaveis';cor='#00d4ff';ic='&#x2713;';}
     }
+    var pctStr=rec>0?Math.round((depPagoTotal/rec)*100)+'% gasto':'';
     var sf=document.createElement('div');
     sf.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:'+cor+'15;border-radius:20px;margin-bottom:16px;border:1px solid '+cor+'33;';
-    sf.innerHTML='<span style="font-size:11px;">'+ic+'</span><span style="font-size:11px;color:'+cor+';font-weight:600;">'+msg+'</span>';
+    sf.innerHTML='<span style="font-size:11px;">'+ic+'</span><span style="font-size:11px;color:'+cor+';font-weight:600;">'+msg+'</span>'+(pctStr?'<span style="font-size:10px;color:'+cor+';opacity:.7;">· '+pctStr+'</span>':'');
     el.appendChild(sf);
   })();
 
@@ -308,6 +309,23 @@ function rInicio(el){
   }
 
   if(depPend>0){var proj=document.createElement('div');proj.style.cssText='margin-top:12px;padding:12px 14px;background:'+(saldoProj<0?'rgba(255,68,102,.08)':'var(--bg2)')+';border-radius:14px;display:flex;justify-content:space-between;align-items:center;'+(saldoProj<0?'border:1px solid rgba(255,68,102,.2);':'');proj.innerHTML='<span style="font-size:12px;color:var(--text3);">Projetado (pagando tudo)</span><span style="font-size:13px;font-weight:600;color:'+(saldoProj>=0?'var(--accent)':'var(--red)')+';">'+fR(saldoProj)+'</span>';el.appendChild(proj);}
+  // RITMO E PROJECAO FIM DO MES
+  (function(){
+    var hj2=new Date(),diaHj=hj2.getDate();
+    var diasNoMes=new Date(ano,mes+1,0).getDate();
+    var diasRestantes=diasNoMes-diaHj;
+    if(depPagoTotal<=0||diaHj<=1)return;
+    var gastoDiario=depPagoTotal/diaHj;
+    var projecaoFim=depPagoTotal+(gastoDiario*diasRestantes);
+    var ritmoCard=document.createElement('div');
+    ritmoCard.style.cssText='margin-top:8px;padding:10px 14px;background:var(--bg2);border-radius:12px;';
+    ritmoCard.innerHTML='<div style="font-size:10px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Ritmo atual</div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<div><div style="font-size:11px;color:var(--text3);">Gasto por dia</div><div style="font-size:14px;font-weight:600;color:var(--text);">'+fR(gastoDiario)+'</div></div>'
+      +'<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">Projecao do mes</div><div style="font-size:14px;font-weight:600;color:'+(projecaoFim>rec&&rec>0?'var(--red)':'var(--yellow)')+';">'+fR(projecaoFim)+'</div></div>'
+      +'</div>';
+    el.appendChild(ritmoCard);
+  })();
 
   // CONTAS
   var cH=document.createElement('div');cH.className='sec-hdr';
@@ -795,10 +813,11 @@ function rRelatorio(el){
     var gc=document.createElement('div');gc.className='card card-pad';
     var cats=Object.keys(catMap).sort(function(a,b){return catMap[b]-catMap[a];});
     var svgS=100,cx=svgS/2,cy=svgS/2,r=42,sa=-Math.PI/2,paths='';
-    cats.forEach(function(cid){var cat=getCat(cid),val=catMap[cid],ang=(val/td)*2*Math.PI,x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(sa+ang),y2=cy+r*Math.sin(sa+ang),lg=ang>Math.PI?1:0;paths+='<path d="M '+cx+' '+cy+' L '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+lg+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+cat.cor+'" stroke="#0a1628" stroke-width="1.5"/>';sa+=ang;});
-    var svgEl='<svg width="'+svgS+'" height="'+svgS+'" viewBox="0 0 '+svgS+' '+svgS+'" style="flex-shrink:0;">'+paths+'<circle cx="'+cx+'" cy="'+cy+'" r="28" fill="#1e1e1e"/><text x="'+cx+'" y="'+(cy-5)+'" text-anchor="middle" font-size="8" fill="#888">Total</text><text x="'+cx+'" y="'+(cy+8)+'" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">'+fRs(td)+'</text></svg>';
+    var catSels=null;
+    cats.forEach(function(cid){var cat=getCat(cid),val=catMap[cid],ang=(val/td)*2*Math.PI,x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(sa+ang),y2=cy+r*Math.sin(sa+ang),lg=ang>Math.PI?1:0;paths+='<path data-cid="'+cid+'" d="M '+cx+' '+cy+' L '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 '+lg+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+cat.cor+'" stroke="#0a1628" stroke-width="1.5" style="cursor:pointer;" onclick="roscaSel(this,\''+cid+'\','+val+','+td+')"/>';sa+=ang;});
+    var svgEl='<svg id="rosca-svg" width="'+svgS+'" height="'+svgS+'" viewBox="0 0 '+svgS+' '+svgS+'" style="flex-shrink:0;">'+paths+'<circle cx="'+cx+'" cy="'+cy+'" r="28" fill="#111820"/><text id="rosca-lbl" x="'+cx+'" y="'+(cy-5)+'" text-anchor="middle" font-size="8" fill="#888">Total</text><text id="rosca-val" x="'+cx+'" y="'+(cy+8)+'" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">'+fRs(td)+'</text></svg>';
     var legHTML='<div style="flex:1;display:flex;flex-direction:column;gap:5px;">';
-    cats.slice(0,6).forEach(function(cid){var cat=getCat(cid),pct=((catMap[cid]/td)*100).toFixed(0);legHTML+='<div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:50%;background:'+cat.cor+';flex-shrink:0;"></div><div style="flex:1;font-size:11px;color:var(--text2);">'+cat.nome+'</div><div style="font-size:11px;font-weight:600;color:var(--text);text-align:right;">'+fR(catMap[cid])+'</div><div style="font-size:10px;color:var(--text3);width:28px;text-align:right;">'+pct+'%</div></div>';});
+    cats.slice(0,6).forEach(function(cid){var cat=getCat(cid),pct=((catMap[cid]/td)*100).toFixed(0);legHTML+='<div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="roscaSel(null,\''+cid+'\','+catMap[cid]+','+td+')"><div style="width:8px;height:8px;border-radius:50%;background:'+cat.cor+';flex-shrink:0;"></div><div style="flex:1;font-size:11px;color:var(--text2);">'+cat.nome+'</div><div style="font-size:11px;font-weight:600;color:var(--text);text-align:right;">'+fR(catMap[cid])+'</div><div style="font-size:10px;color:var(--text3);width:28px;text-align:right;">'+pct+'%</div></div>';});
     legHTML+='</div>';
     gc.innerHTML='<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">'+svgEl+legHTML+'</div>';
     // barras por categoria
@@ -811,28 +830,69 @@ function rRelatorio(el){
   var hCard=document.createElement('div');hCard.className='card card-pad';
   var mds=[],mxV=1;
   for(var i=5;i>=0;i--){
-    var mm=mes-i,aa=ano;if(mm<0){mm+=12;aa--;}
-    var mt=d.transacoes.filter(function(t){var dt=new Date(t.data+'T12:00:00');return dt.getMonth()===mm&&dt.getFullYear()===aa;});
+    var mm=mes-i,aa2=ano;if(mm<0){mm+=12;aa2--;}
+    var mt=d.transacoes.filter(function(t){var dt=new Date(t.data+'T12:00:00');return dt.getMonth()===mm&&dt.getFullYear()===aa2;});
     var mr2=mt.filter(function(t){return t.tipo==='receita';}).reduce(function(a,t){return a+t.valor;},0);
     var md2=mt.filter(function(t){return t.tipo==='despesa';}).reduce(function(a,t){return a+t.valor;},0);
-    mds.push({l:MC[mm],r:mr2,d:md2,atual:i===0});
+    mds.push({l:MC[mm],r:mr2,d:md2,atual:i===0,m:mm,a:aa2,saldo:mr2-md2});
     if(Math.max(mr2,md2)>mxV)mxV=Math.max(mr2,md2);
   }
-  var barsH=80,barsW='100%';
-  var barsDiv=document.createElement('div');barsDiv.style.cssText='display:flex;gap:10px;align-items:flex-end;height:'+barsH+'px;margin-bottom:6px;';
-  mds.forEach(function(m){
+  var barsH=80;
+  // Melhor e pior mes (excluindo atual)
+  var mdsAnts=mds.filter(function(m){return !m.atual&&(m.r>0||m.d>0);});
+  var melhor=mdsAnts.length>0?mdsAnts.reduce(function(a,b){return b.saldo>a.saldo?b:a;}):null;
+  var pior=mdsAnts.length>0?mdsAnts.reduce(function(a,b){return b.saldo<a.saldo?b:a;}):null;
+  // Comparacao com mes anterior
+  var mesAnt=mds.length>=2?mds[mds.length-2]:null;
+  var mesAt=mds[mds.length-1];
+  var compHTML='';
+  if(mesAnt&&mesAnt.d>0&&mesAt.d>0){
+    var diffPct=Math.round(((mesAt.d-mesAnt.d)/mesAnt.d)*100);
+    var diffCor=diffPct<=0?'#4ade80':'var(--red)';
+    compHTML='<div style="font-size:11px;color:'+diffCor+';margin-bottom:8px;">'+(diffPct<=0?'&#x2193; Voce gastou '+(Math.abs(diffPct))+'% a menos que em '+mesAnt.l:'&#x2191; Voce gastou '+Math.abs(diffPct)+'% a mais que em '+mesAnt.l)+'</div>';
+  }
+  if(compHTML)hCard.innerHTML=compHTML;
+  var barsDiv=document.createElement('div');barsDiv.style.cssText='display:flex;gap:10px;align-items:flex-end;height:'+barsH+'px;margin-bottom:4px;';
+  mds.forEach(function(m,idx){
     var hR=mxV>0?Math.max(3,Math.round((m.r/mxV)*(barsH-4))):3;
     var hD=mxV>0?Math.max(3,Math.round((m.d/mxV)*(barsH-4))):3;
-    var grp=document.createElement('div');grp.style.cssText='flex:1;display:flex;gap:3px;align-items:flex-end;justify-content:center;';
+    var grp=document.createElement('div');grp.style.cssText='flex:1;display:flex;gap:3px;align-items:flex-end;justify-content:center;cursor:pointer;';
     var bR=document.createElement('div');bR.style.cssText='width:8px;height:'+hR+'px;background:#00d4ff;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
     var bD=document.createElement('div');bD.style.cssText='width:8px;height:'+hD+'px;background:#ff4466;opacity:'+(m.atual?'1':'0.5')+';border-radius:2px 2px 0 0;';
-    grp.appendChild(bR);grp.appendChild(bD);barsDiv.appendChild(grp);
+    grp.appendChild(bR);grp.appendChild(bD);
+    // Toque navega para o mes
+    grp.addEventListener('click',(function(mObj){return function(){
+      mes=mObj.m;ano=mObj.a;
+      document.getElementById('mesLabel').textContent=MC[mes]+'/'+ano;
+      renderPag();
+    };})(m));
+    barsDiv.appendChild(grp);
   });
   var labelsDiv=document.createElement('div');labelsDiv.style.cssText='display:flex;gap:10px;margin-bottom:8px;';
-  mds.forEach(function(m){var l=document.createElement('div');l.style.cssText='flex:1;font-size:9px;color:'+(m.atual?'var(--accent)':'var(--text3)')+';text-align:center;';l.textContent=m.l;labelsDiv.appendChild(l);});
-  var legDiv=document.createElement('div');legDiv.style.cssText='display:flex;gap:14px;';
-  legDiv.innerHTML='<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:10px;height:10px;border-radius:2px;background:#00d4ff;"></div>Receitas</div><div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:10px;height:10px;border-radius:2px;background:#ff4466;"></div>Despesas</div>';
+  mds.forEach(function(m){
+    var saldoStr=m.r>0||m.d>0?fRs(m.saldo):'';
+    var saldoCor=m.saldo>=0?'#4ade80':'#ff4466';
+    var l=document.createElement('div');l.style.cssText='flex:1;text-align:center;cursor:pointer;';
+    l.innerHTML='<div style="font-size:9px;color:'+(m.atual?'var(--accent)':'var(--text3)')+';">'+m.l+'</div>'+(saldoStr?'<div style="font-size:8px;color:'+saldoCor+';margin-top:1px;">'+saldoStr+'</div>':'');
+    l.addEventListener('click',(function(mObj){return function(){
+      mes=mObj.m;ano=mObj.a;
+      document.getElementById('mesLabel').textContent=MC[mes]+'/'+ano;
+      renderPag();
+    };})(m));
+    labelsDiv.appendChild(l);
+  });
+  var legDiv=document.createElement('div');legDiv.style.cssText='display:flex;justify-content:space-between;align-items:center;';
+  var legL=document.createElement('div');legL.style.cssText='display:flex;gap:10px;';
+  legL.innerHTML='<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);"><div style="width:8px;height:8px;border-radius:2px;background:#00d4ff;"></div>Rec.</div><div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);"><div style="width:8px;height:8px;border-radius:2px;background:#ff4466;"></div>Desp.</div>';
+  legDiv.appendChild(legL);
   hCard.appendChild(barsDiv);hCard.appendChild(labelsDiv);hCard.appendChild(legDiv);
+  // Melhor e pior mes
+  if(melhor&&pior&&melhor.l!==pior.l){
+    var mpDiv=document.createElement('div');mpDiv.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--border2);';
+    mpDiv.innerHTML='<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Melhor mes</div><div style="font-size:12px;font-weight:600;color:#4ade80;">'+melhor.l+'</div><div style="font-size:11px;color:var(--text3);">saldo '+fRs(melhor.saldo)+'</div></div>'
+      +'<div style="text-align:right;"><div style="font-size:9px;color:var(--text3);margin-bottom:2px;">Pior mes</div><div style="font-size:12px;font-weight:600;color:#ff4466;">'+pior.l+'</div><div style="font-size:11px;color:var(--text3);">saldo '+fRs(pior.saldo)+'</div></div>';
+    hCard.appendChild(mpDiv);
+  }
   el.appendChild(hCard);
 
   // ORCAMENTOS
@@ -1236,6 +1296,25 @@ function exportaDados(){
 }
 function importaDados(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var novo=JSON.parse(e.target.result);if(!novo.transacoes&&!novo.contas){toast('Arquivo invalido','err');return;}var atual=gd();var ids={};atual.transacoes.forEach(function(t){ids[t.id]=true;});var add=0;(novo.transacoes||[]).forEach(function(t){if(!ids[t.id]){atual.transacoes.push(t);add++;}});['contas','cartoes','metas'].forEach(function(k){var kids={};atual[k].forEach(function(x){kids[x.id]=true;});(novo[k]||[]).forEach(function(x){if(!kids[x.id])atual[k].push(x);});});save(atual);toast(add+' lancamentos importados!','ok');fechaDrawer();renderPag();}catch(err){toast('Erro ao importar','err');}};reader.readAsText(file);}
 function limpaDados(){if(!confirm('Apagar TODOS os dados?'))return;if(!confirm('Tem certeza?'))return;localStorage.removeItem('fx3');toast('Dados apagados!','ok');fechaDrawer();renderPag();}
+
+// ROSCA SELECIONAR CATEGORIA
+function roscaSel(el,cid,val,td){
+  var lbl=document.getElementById('rosca-lbl');
+  var valEl=document.getElementById('rosca-val');
+  if(!lbl||!valEl)return;
+  var cat=getCat(cid);
+  var pct=td>0?((val/td)*100).toFixed(1)+'%':'0%';
+  lbl.textContent=cat.nome;
+  lbl.setAttribute('fill',cat.cor);
+  valEl.textContent=fRs(val);
+  valEl.setAttribute('fill',cat.cor);
+  // Reset opacidade de todos os paths
+  var svg=document.getElementById('rosca-svg');
+  if(svg){svg.querySelectorAll('path').forEach(function(p){p.style.opacity='0.4';});if(el)el.style.opacity='1';}
+  // Clique duplo reseta
+  if(el&&el._selecionado){svg.querySelectorAll('path').forEach(function(p){p.style.opacity='1';});lbl.textContent='Total';lbl.setAttribute('fill','#888');valEl.textContent=fRs(td);valEl.setAttribute('fill','#fff');el._selecionado=false;return;}
+  if(el)el._selecionado=true;
+}
 
 // TRANSFERENCIA ENTRE CONTAS
 function abreTransferencia(){
