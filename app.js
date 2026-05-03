@@ -1023,25 +1023,6 @@ function abrePagParcelaDivida(id){
   abM('sh-pag-div');
 }
 
-function confirmaPagParcelaDivida(){
-  var data=document.getElementById('pag-div-data').value;
-  if(!data){toast('Informe a data','err');return;}
-  var contaId=document.getElementById('pag-div-conta').value;
-  var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
-  if(!div||!div.acordo)return;
-  var ac=div.acordo,valor=ac.valorParc;
-  if(contaId){var c=d.contas.find(function(x){return x.id===contaId;});if(c)c.saldo-=valor;}
-  if(!ac.parcPagas)ac.parcPagas=[];
-  ac.parcPagas.push({data:data,valor:valor,conta:contaId});
-  // Calcula proxima parcela
-  if(ac.parcPagas.length>=ac.parcTotal){div.status='quitada';div.dataQuit=data;ac.ativo=false;}
-  else{
-    var prox=new Date(data+'T12:00:00');prox.setMonth(prox.getMonth()+1);
-    ac.proxVenc=prox.toISOString().split('T')[0];
-  }
-  save(d);fcM('sh-pag-div');toast('Parcela paga!','ok');editDividaId=null;renderPag();
-}
-
 function bDivCatGrid(){
   var e=document.getElementById('div-cat-grid');if(!e)return;
   e.innerHTML=DIV_CATS.map(function(c){var sel=divCatSel===c.id;return'<div style="text-align:center;cursor:pointer;padding:8px 4px;border-radius:10px;border:1.5px solid '+(sel?c.cor:'transparent')+';background:'+(sel?c.cor+'22':'transparent')+'" onclick="selDivCat(\''+c.id+'\')"><div style="font-size:18px;margin-bottom:2px;">'+c.ic+'</div><div style="font-size:9px;color:'+(sel?c.cor:'var(--text3)')+'">'+c.nome+'</div></div>';}).join('');
