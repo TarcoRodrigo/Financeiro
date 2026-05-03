@@ -15,7 +15,7 @@ var CATSG=[{id:'alimentacao',nome:'Alimentacao',ic:'&#x1F374;',cor:'#FB923C'},{i
 var CATSR=[{id:'salario',nome:'Salario',ic:'&#x1F4B5;',cor:'#00E5A0'},{id:'freelance',nome:'Freelance',ic:'&#x1F4BB;',cor:'#38BDF8'},{id:'investimento',nome:'Investimento',ic:'&#x1F4C8;',cor:'#34D399'},{id:'bonus',nome:'Bonus',ic:'&#x1F381;',cor:'#F472B6'},{id:'outros_rec',nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'}];
 var META_CATS=[{id:'emergencia',nome:'Emergencia',ic:'&#x1F6E1;',cor:'#F87171'},{id:'viagem',nome:'Viagem',ic:'&#x2708;',cor:'#38BDF8'},{id:'compra',nome:'Compra',ic:'&#x1F6D2;',cor:'#4ADE80'},{id:'investimento',nome:'Investimento',ic:'&#x1F4C8;',cor:'#34D399'},{id:'outros',nome:'Outros',ic:'&#x1F3AF;',cor:'#A78BFA'}];
 var DIV_CATS=[{id:'cartao',nome:'Cartao',ic:'&#x1F4B3;',cor:'#A78BFA'},{id:'emprestimo',nome:'Emprestimo',ic:'&#x1F3E6;',cor:'#60A5FA'},{id:'financiamento',nome:'Financiamento',ic:'&#x1F3E0;',cor:'#FBBF24'},{id:'conta',nome:'Conta/Servico',ic:'&#x1F4A1;',cor:'#FCD34D'},{id:'pessoal',nome:'Pessoa Fisica',ic:'&#x1F464;',cor:'#4ADE80'},{id:'banco',nome:'Banco',ic:'&#x1F4C8;',cor:'#38BDF8'},{id:'outros',nome:'Outros',ic:'&#x1F4B0;',cor:'#94A3B8'}];
-var DIV_STATUS=[{id:'aberto',nome:'Em aberto',cor:'#F87171'},{id:'negociando',nome:'Em negociacao',cor:'#FBBF24'},{id:'acordo',nome:'Acordo ativo',cor:'#60A5FA'},{id:'quitada',nome:'Quitada',cor:'#4ADE80'}];
+var DIV_STATUS=[{id:'aberto',nome:'Em aberto',cor:'#F87171'},{id:'acordo',nome:'Acordo ativo',cor:'#60A5FA'},{id:'quitada',nome:'Quitada',cor:'#4ADE80'}];
 var MN=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MC=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -645,140 +645,152 @@ function buildLancamentosCC(el,c,txs){
   el.appendChild(lc);
 }
 
-// ═══════════════════════════════════════
-// RENDER DIVIDAS
-// ═══════════════════════════════════════
+// =======================================
+// RENDER DIVIDAS - VERSAO ATUALIZADA
+// =======================================
 function rDividas(el){
   var d=gd(),divs=d.dividas||[];
 
-  // HEADER
   var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
   var tit=document.createElement('div');tit.style.cssText='font-size:20px;font-weight:700;';tit.textContent='Dividas';
   var add=document.createElement('button');add.style.cssText='background:var(--red);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;';add.textContent='+ Nova';add.addEventListener('click',function(){abreNovaDivida();});
   hdr.appendChild(tit);hdr.appendChild(add);el.appendChild(hdr);
 
-  // TOTAIS
-  var totalAberto=divs.filter(function(d){return d.status==='aberto';}).reduce(function(a,d){return a+(d.valorAtual||d.valorOriginal||0);},0);
-  var totalNeg=divs.filter(function(d){return d.status==='negociando';}).reduce(function(a,d){return a+(d.valorAtual||d.valorOriginal||0);},0);
-  var totalAcordo=divs.filter(function(d){return d.status==='acordo';}).reduce(function(a,d){return a+(d.acordo?d.acordo.valorTotal:0);},0);
-  var totalQuit=divs.filter(function(d){return d.status==='quitada';}).reduce(function(a,d){return a+(d.valorOriginal||0);},0);
-  var totalDevendo=totalAberto+totalNeg+totalAcordo;
+  var totalAberto=divs.filter(function(x){return x.status==='aberto';}).reduce(function(a,x){return a+(x.valorAtual||x.valorOriginal||0);},0);
+  var totalAcordo=divs.filter(function(x){return x.status==='acordo';}).reduce(function(a,x){return a+(x.acordo?x.acordo.valorTotal:0);},0);
+  var totalQuit=divs.filter(function(x){return x.status==='quitada';}).reduce(function(a,x){return a+(x.valorOriginal||0);},0);
+  var totalDevendo=totalAberto+totalAcordo;
+  var totalPago=0;
+  divs.forEach(function(div){
+    if(div.historicoPag)div.historicoPag.forEach(function(p){totalPago+=p.valor;});
+    if(div.acordo&&div.acordo.parcPagas)div.acordo.parcPagas.forEach(function(p){totalPago+=p.valor;});
+  });
 
   var resumoCard=document.createElement('div');resumoCard.className='card card-pad';resumoCard.style.marginBottom='16px';
-  resumoCard.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Visao Geral</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-    +'<div style="background:rgba(255,68,102,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em aberto</div><div style="font-size:16px;font-weight:300;color:#ff4466;letter-spacing:-.5px;">'+fRs(totalAberto)+'</div></div>'
-    +'<div style="background:rgba(255,170,0,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Negociando</div><div style="font-size:16px;font-weight:300;color:var(--yellow);letter-spacing:-.5px;">'+fRs(totalNeg)+'</div></div>'
-    +'<div style="background:rgba(96,165,250,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em acordo</div><div style="font-size:16px;font-weight:300;color:#60a5fa;letter-spacing:-.5px;">'+fRs(totalAcordo)+'</div></div>'
-    +'<div style="background:rgba(74,222,128,.08);border-radius:10px;padding:10px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Quitado</div><div style="font-size:16px;font-weight:300;color:#00d4ff;letter-spacing:-.5px;">'+fRs(totalQuit)+'</div></div>'
-    +'</div>'
-    +(totalDevendo>0?'<div style="margin-top:12px;padding-top:10px;border-top:.5px solid var(--border2);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--text3);">Total em aberto/pendente</span><span style="font-size:15px;font-weight:600;color:#ff4466;">'+fR(totalDevendo)+'</span></div>':'');
+  var resumoGrid=document.createElement('div');resumoGrid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+  var c1=document.createElement('div');c1.style.cssText='background:rgba(255,68,102,.08);border-radius:10px;padding:10px;cursor:pointer;';
+  c1.innerHTML='<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em aberto</div><div style="font-size:16px;font-weight:300;color:#ff4466;letter-spacing:-.5px;">'+fRs(totalAberto)+'</div>';
+  c1.addEventListener('click',function(){divFiltro='aberto';renderPag();});
+  var c2=document.createElement('div');c2.style.cssText='background:rgba(96,165,250,.08);border-radius:10px;padding:10px;cursor:pointer;';
+  c2.innerHTML='<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Em acordo</div><div style="font-size:16px;font-weight:300;color:#60a5fa;letter-spacing:-.5px;">'+fRs(totalAcordo)+'</div>';
+  c2.addEventListener('click',function(){divFiltro='acordo';renderPag();});
+  var c3=document.createElement('div');c3.style.cssText='background:rgba(255,170,0,.08);border-radius:10px;padding:10px;cursor:pointer;';
+  c3.innerHTML='<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Pagamentos</div><div style="font-size:16px;font-weight:300;color:var(--yellow);letter-spacing:-.5px;">'+fRs(totalPago)+'</div>';
+  c3.addEventListener('click',function(){abreTodosPagamentosDividas();});
+  var c4=document.createElement('div');c4.style.cssText='background:rgba(74,222,128,.08);border-radius:10px;padding:10px;cursor:pointer;';
+  c4.innerHTML='<div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Quitadas</div><div style="font-size:16px;font-weight:300;color:#4ade80;letter-spacing:-.5px;">'+fRs(totalQuit)+'</div>';
+  c4.addEventListener('click',function(){divFiltro='quitada';renderPag();});
+  resumoGrid.appendChild(c1);resumoGrid.appendChild(c2);resumoGrid.appendChild(c3);resumoGrid.appendChild(c4);
+  resumoCard.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Visao Geral</div>';
+  resumoCard.appendChild(resumoGrid);
+  if(totalDevendo>0){
+    var totRow=document.createElement('div');totRow.style.cssText='margin-top:12px;padding-top:10px;border-top:.5px solid var(--border2);display:flex;justify-content:space-between;align-items:center;';
+    totRow.innerHTML='<span style="font-size:12px;color:var(--text3);">Total em aberto/pendente</span><span style="font-size:15px;font-weight:600;color:#ff4466;">'+fR(totalDevendo)+'</span>';
+    resumoCard.appendChild(totRow);
+  }
   el.appendChild(resumoCard);
 
-  // FILTROS
   var chips=document.createElement('div');chips.className='chips';chips.style.marginBottom='14px';
-  [{id:'ativos',nome:'Ativos'},{id:'aberto',nome:'Em aberto'},{id:'negociando',nome:'Negociando'},{id:'acordo',nome:'Em acordo'},{id:'quitada',nome:'Quitadas'}].forEach(function(f){
+  [{id:'ativos',nome:'Ativos'},{id:'aberto',nome:'Em aberto'},{id:'acordo',nome:'Em acordo'},{id:'quitada',nome:'Quitadas'}].forEach(function(f){
     var c=document.createElement('div');c.className='chip'+(divFiltro===f.id?' ativo':'');c.textContent=f.nome;
     c.addEventListener('click',function(){divFiltro=f.id;renderPag();});chips.appendChild(c);
   });
   el.appendChild(chips);
 
-  // LISTA
   var fl=divs;
-  if(divFiltro==='ativos')fl=divs.filter(function(d){return d.status!=='quitada';});
-  else if(divFiltro==='quitada')fl=divs.filter(function(d){return d.status==='quitada';});
-  else fl=divs.filter(function(d){return d.status===divFiltro;});
+  if(divFiltro==='ativos')fl=divs.filter(function(x){return x.status!=='quitada';});
+  else if(divFiltro==='quitada')fl=divs.filter(function(x){return x.status==='quitada';});
+  else fl=divs.filter(function(x){return x.status===divFiltro;});
 
   if(fl.length===0){
     var em=document.createElement('div');em.className='card card-pad tx-empty';
-    if(divs.length===0){
-      em.innerHTML='&#x1F4B0;<br>Nenhuma divida cadastrada<br><span style="font-size:12px;">Toque em + Nova para comecar</span>';
-    } else if(divFiltro==='quitada'&&divs.filter(function(x){return x.status==='quitada';}).length===0){
-      em.innerHTML='Nenhuma divida quitada ainda';
-    } else if(divFiltro==='ativos'&&divs.every(function(x){return x.status==='quitada';})){
+    if(divs.length===0){em.innerHTML='&#x1F4B0;<br>Nenhuma divida cadastrada<br><span style="font-size:12px;">Toque em + Nova para comecar</span>';}
+    else if(divFiltro==='quitada'&&divs.filter(function(x){return x.status==='quitada';}).length===0){em.innerHTML='Nenhuma divida quitada ainda';}
+    else if(divFiltro==='ativos'&&divs.every(function(x){return x.status==='quitada';})){
       em.style.cssText='background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:14px;padding:24px;text-align:center;margin-bottom:12px;';
-      em.innerHTML='<div style="font-size:36px;margin-bottom:10px;">&#x1F389;</div><div style="font-size:16px;font-weight:700;color:#00d4ff;margin-bottom:6px;">Parabens!</div><div style="font-size:13px;color:var(--text3);">Todas as suas dividas foram quitadas.<br>Continue assim!</div>';
-    } else {
-      em.innerHTML='Nenhuma divida nesta categoria';
-    }
-    el.appendChild(em);
-    return;
+      em.innerHTML='<div style="font-size:36px;margin-bottom:10px;">&#x1F389;</div><div style="font-size:16px;font-weight:700;color:#00d4ff;margin-bottom:6px;">Parabens!</div><div style="font-size:13px;color:var(--text3);">Todas as suas dividas foram quitadas!</div>';
+    } else {em.innerHTML='Nenhuma divida nesta categoria';}
+    el.appendChild(em);return;
   }
 
   fl.forEach(function(div){
     var dc=getDivCat(div.cat||'outros'),st=getDivStatus(div.status||'aberto');
     var card=document.createElement('div');card.className='card card-pad';card.style.marginBottom='10px';
-
-    // Borda de status
     card.style.borderLeft='3px solid '+st.cor;
 
-    // Header da divida
     var dHdr=document.createElement('div');dHdr.style.cssText='display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;';
     var dIc=document.createElement('div');dIc.style.cssText='width:40px;height:40px;border-radius:10px;background:'+dc.cor+'22;color:'+dc.cor+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;';dIc.innerHTML=dc.ic;
     var dInfo=document.createElement('div');dInfo.style.cssText='flex:1;';
     var dNome=document.createElement('div');dNome.style.cssText='font-size:15px;font-weight:600;';dNome.textContent=div.credor;
-    var dSub=document.createElement('div');dSub.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;';
-    dSub.textContent=dc.nome+(div.dataVenc?' · Venceu em '+fData(div.dataVenc):'');
+    var dSub=document.createElement('div');dSub.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;';dSub.textContent=dc.nome+(div.dataVenc?' · Venceu em '+fData(div.dataVenc):'');
     var dStBdg=document.createElement('span');dStBdg.style.cssText='display:inline-block;margin-top:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:'+st.cor+'22;color:'+st.cor+';';dStBdg.textContent=st.nome;
     dInfo.appendChild(dNome);dInfo.appendChild(dSub);dInfo.appendChild(document.createElement('br'));dInfo.appendChild(dStBdg);
     var dEdit=document.createElement('button');dEdit.style.cssText='background:var(--bg3);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text3);cursor:pointer;flex-shrink:0;';dEdit.textContent='Editar';dEdit.addEventListener('click',(function(id){return function(){abreEditDivida(id);};})(div.id));
     dHdr.appendChild(dIc);dHdr.appendChild(dInfo);dHdr.appendChild(dEdit);card.appendChild(dHdr);
 
-    // Valores
     var dVals=document.createElement('div');dVals.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
     var v1=document.createElement('div');v1.style.cssText='background:var(--bg3);border-radius:8px;padding:8px;';v1.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Valor original</div><div style="font-size:14px;font-weight:300;color:var(--text);">'+fR(div.valorOriginal||0)+'</div>';
     var v2=document.createElement('div');v2.style.cssText='background:var(--bg3);border-radius:8px;padding:8px;';
-    if(div.valorAtual&&div.valorAtual!==div.valorOriginal){v2.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Valor atual c/juros</div><div style="font-size:14px;font-weight:300;color:#ff4466;">'+fR(div.valorAtual)+'</div>';}
+    if(div.valorAtual&&div.valorAtual!==div.valorOriginal){v2.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Saldo devedor</div><div style="font-size:14px;font-weight:300;color:#ff4466;">'+fR(div.valorAtual)+'</div>';}
     else{v2.innerHTML='<div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Categoria</div><div style="font-size:14px;font-weight:300;color:var(--text);">'+dc.nome+'</div>';}
     dVals.appendChild(v1);dVals.appendChild(v2);card.appendChild(dVals);
 
-    // Acordo ativo
     if(div.acordo&&div.acordo.ativo){
-      var ac=div.acordo;
-      var parcPagas=ac.parcPagas?ac.parcPagas.length:0;
-      var pct=ac.parcTotal>0?Math.min(100,(parcPagas/ac.parcTotal)*100):0;
+      var ac=div.acordo,parcPagas=ac.parcPagas?ac.parcPagas.length:0,pct=ac.parcTotal>0?Math.min(100,(parcPagas/ac.parcTotal)*100):0;
       var acDiv=document.createElement('div');acDiv.style.cssText='background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:10px;margin-bottom:10px;';
-      acDiv.innerHTML='<div style="font-size:11px;font-weight:600;color:#60a5fa;margin-bottom:8px;">&#x1F91D; Acordo ativo</div>'
-        +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Valor negociado</span><span style="color:var(--text);font-weight:600;">'+fR(ac.valorTotal)+'</span></div>'
+      var acHdr=document.createElement('div');acHdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      acHdr.innerHTML='<span style="font-size:11px;font-weight:600;color:#60a5fa;">&#x1F91D; Acordo ativo</span>';
+      var bEditAc=document.createElement('button');bEditAc.style.cssText='background:rgba(96,165,250,.15);border:none;border-radius:6px;padding:3px 8px;font-size:10px;color:#60a5fa;cursor:pointer;';bEditAc.textContent='Editar acordo';
+      bEditAc.addEventListener('click',(function(id){return function(){abreEditAcordo(id);};})(div.id));
+      acHdr.appendChild(bEditAc);acDiv.appendChild(acHdr);
+      acDiv.innerHTML+='<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Valor negociado</span><span style="color:var(--text);font-weight:600;">'+fR(ac.valorTotal)+'</span></div>'
         +(ac.desconto?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Desconto obtido</span><span style="color:#00d4ff;font-weight:600;">'+fR(ac.desconto)+'</span></div>':'')
         +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;"><span style="color:var(--text3);">Parcelas pagas</span><span style="color:var(--text);font-weight:600;">'+parcPagas+' / '+ac.parcTotal+'</span></div>'
         +'<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:'+pct+'%;background:#60a5fa;border-radius:3px;"></div></div>'
-        +'<div style="font-size:10px;color:var(--text3);">'+pct.toFixed(0)+'% quitado &middot; Parcela: '+fR(ac.valorParc)+(ac.protocolo?' &middot; Prot: '+ac.protocolo:'')+'</div>';
+        +'<div style="font-size:10px;color:var(--text3);">'+pct.toFixed(0)+'% quitado &middot; Parcela: '+fR(ac.valorParc)+(ac.protocolo?' &middot; Prot: '+ac.protocolo:'')+(ac.proxVenc?' &middot; Prox: '+fData(ac.proxVenc):'')+'</div>';
       card.appendChild(acDiv);
     }
 
-    // Historico de pagamentos
-    if(div.acordo&&div.acordo.parcPagas&&div.acordo.parcPagas.length>0){
-      var histBtn=document.createElement('div');histBtn.style.cssText='font-size:11px;color:var(--accent);cursor:pointer;margin-bottom:8px;padding:5px 0;';histBtn.textContent='Ver historico de pagamentos ('+div.acordo.parcPagas.length+')';
+    var todosPags=[];
+    if(div.historicoPag)div.historicoPag.forEach(function(p,i){todosPags.push({tipo:'livre',idx:i,data:p.data,valor:p.valor,conta:p.conta,contaId:p.contaId});});
+    if(div.acordo&&div.acordo.parcPagas)div.acordo.parcPagas.forEach(function(p,i){todosPags.push({tipo:'parcela',idx:i,parc:i+1,parcTotal:div.acordo.parcTotal,data:p.data,valor:p.valor,conta:p.conta,contaId:p.contaId});});
+    todosPags.sort(function(a,b){return new Date(b.data)-new Date(a.data);});
+    if(todosPags.length>0){
+      var totalPagoDiv=todosPags.reduce(function(a,p){return a+p.valor;},0);
+      var histBtn=document.createElement('div');histBtn.style.cssText='font-size:11px;color:var(--accent);cursor:pointer;margin-bottom:8px;padding:5px 0;display:flex;justify-content:space-between;align-items:center;';
+      histBtn.innerHTML='<span>Pagamentos ('+todosPags.length+')</span><span style="color:var(--yellow);font-weight:600;">'+fR(totalPagoDiv)+' pago</span>';
       var histDiv=document.createElement('div');histDiv.style.display='none';
-      div.acordo.parcPagas.slice().reverse().forEach(function(hp,hi){
-        var hRow=document.createElement('div');hRow.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--border2);font-size:11px;';
-        hRow.innerHTML='<div><div style="color:var(--text);">Parcela '+(div.acordo.parcPagas.length-hi)+' / '+div.acordo.parcTotal+'</div><div style="color:var(--text3);font-size:10px;">'+fData(hp.data)+'</div></div><div style="color:#00d4ff;font-weight:600;">'+fR(hp.valor)+'</div>';
-        histDiv.appendChild(hRow);
+      todosPags.forEach(function(p){
+        var hRow=document.createElement('div');hRow.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--border2);';
+        var hInfo=document.createElement('div');hInfo.style.cssText='flex:1;';
+        hInfo.innerHTML='<div style="font-size:12px;color:var(--text);">'+(p.tipo==='parcela'?'Parcela '+p.parc+'/'+p.parcTotal:'Pagamento')+'</div><div style="font-size:10px;color:var(--text3);">'+fData(p.data)+(p.conta?' · '+p.conta:'')+'</div>';
+        var hRight=document.createElement('div');hRight.style.cssText='display:flex;align-items:center;gap:8px;';
+        var hVal=document.createElement('div');hVal.style.cssText='font-size:13px;font-weight:600;color:#4ade80;';hVal.textContent=fR(p.valor);
+        var bEditP=document.createElement('button');bEditP.style.cssText='background:var(--bg3);border:none;border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text3);cursor:pointer;';bEditP.textContent='Editar';
+        bEditP.addEventListener('click',(function(divId,pag){return function(){abreEditPagamentoDivida(divId,pag);};})(div.id,p));
+        hRight.appendChild(hVal);hRight.appendChild(bEditP);hRow.appendChild(hInfo);hRow.appendChild(hRight);histDiv.appendChild(hRow);
       });
       histBtn.addEventListener('click',function(){histDiv.style.display=histDiv.style.display==='none'?'block':'none';});
       card.appendChild(histBtn);card.appendChild(histDiv);
     }
 
-    // Observacao
     if(div.obs){var dObs=document.createElement('div');dObs.style.cssText='font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 10px;background:var(--bg3);border-radius:8px;';dObs.textContent=div.obs;card.appendChild(dObs);}
 
-    // Acoes
     if(div.status!=='quitada'){
       var acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
       if(!div.acordo||!div.acordo.ativo){
-        var bAc=document.createElement('button');bAc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bAc.innerHTML='🤝 Acordo';bAc.addEventListener('click',(function(id){return function(){abreAcordo(id);};})(div.id));acoes.appendChild(bAc);
+        var bAc=document.createElement('button');bAc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bAc.innerHTML='&#x1F91D; Acordo';bAc.addEventListener('click',(function(id){return function(){abreAcordo(id);};})(div.id));acoes.appendChild(bAc);
       } else {
-        var bPc=document.createElement('button');bPc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPc.innerHTML='💵 Pagar parcela';bPc.addEventListener('click',(function(id){return function(){abrePagParcelaDivida(id);};})(div.id));acoes.appendChild(bPc);
+        var bPc=document.createElement('button');bPc.style.cssText='flex:1;padding:8px;background:rgba(96,165,250,.12);color:#60a5fa;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPc.innerHTML='&#x1F4B5; Pagar parcela';bPc.addEventListener('click',(function(id){return function(){abrePagParcelaDivida(id);};})(div.id));acoes.appendChild(bPc);
       }
-      var bPag=document.createElement('button');bPag.style.cssText='flex:1;padding:8px;background:rgba(255,170,0,.1);color:var(--yellow);border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPag.innerHTML='💰 Pagamento';bPag.addEventListener('click',(function(id){return function(){abreRegistroPagamentoDivida(id);};})(div.id));acoes.appendChild(bPag);
-      var bQ=document.createElement('button');bQ.style.cssText='padding:8px 12px;background:rgba(74,222,128,.1);color:#4ade80;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bQ.innerHTML='✓ Quitar';bQ.addEventListener('click',(function(id){return function(){quitarDivida(id);};})(div.id));acoes.appendChild(bQ);
+      var bPag=document.createElement('button');bPag.style.cssText='flex:1;padding:8px;background:rgba(255,170,0,.1);color:var(--yellow);border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bPag.innerHTML='&#x1F4B0; Pagamento';bPag.addEventListener('click',(function(id){return function(){abreRegistroPagamentoDivida(id);};})(div.id));acoes.appendChild(bPag);
+      var bQ=document.createElement('button');bQ.style.cssText='padding:8px 12px;background:rgba(74,222,128,.1);color:#4ade80;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bQ.innerHTML='&#x2713; Quitar';bQ.addEventListener('click',(function(id){return function(){quitarDivida(id);};})(div.id));acoes.appendChild(bQ);
       card.appendChild(acoes);
+    } else {
+      var bReab=document.createElement('button');bReab.style.cssText='padding:8px 12px;background:rgba(255,68,102,.1);color:#ff4466;border:none;border-radius:var(--rsm);font-size:12px;font-weight:600;cursor:pointer;';bReab.textContent='Reabrir';bReab.addEventListener('click',(function(id){return function(){reabrirDivida(id);};})(div.id));card.appendChild(bReab);
     }
-
     el.appendChild(card);
   });
-
 }
 
 // RESUMO FINANCEIRO - aparece no final da home
