@@ -960,8 +960,8 @@ function reabrirDivida(id){
 function abreTodosPagamentosDividas(){
   var d=gd(),todos=[];
   (d.dividas||[]).forEach(function(div){
-    if(div.historicoPag)div.historicoPag.forEach(function(p){todos.push({credor:div.credor,tipo:'livre',data:p.data,valor:p.valor,conta:p.conta});});
-    if(div.acordo&&div.acordo.parcPagas)div.acordo.parcPagas.forEach(function(p,i){todos.push({credor:div.credor,tipo:'parcela',parc:i+1,parcTotal:div.acordo.parcTotal,data:p.data,valor:p.valor,conta:p.conta});});
+    if(div.historicoPag)div.historicoPag.forEach(function(p,i){todos.push({divId:div.id,credor:div.credor,tipo:'livre',idx:i,data:p.data,valor:p.valor,conta:p.conta,contaId:p.contaId});});
+    if(div.acordo&&div.acordo.parcPagas)div.acordo.parcPagas.forEach(function(p,i){todos.push({divId:div.id,credor:div.credor,tipo:'parcela',idx:i,parc:i+1,parcTotal:div.acordo.parcTotal,data:p.data,valor:p.valor,conta:p.conta,contaId:p.contaId});});
   });
   todos.sort(function(a,b){return new Date(b.data)-new Date(a.data);});
   var el=document.getElementById('lista-pagos');if(!el)return;
@@ -973,15 +973,57 @@ function abreTodosPagamentosDividas(){
   el.appendChild(summ);
   var card=document.createElement('div');card.className='card';
   todos.forEach(function(p){
-    var row=document.createElement('div');row.className='tx-item';
-    row.innerHTML='<div class="tx-icone" style="background:rgba(255,170,0,.15);color:var(--yellow);">&#x1F4B0;</div>'
-      +'<div class="tx-info"><div class="tx-nome">'+p.credor+'</div><div class="tx-cat">'+(p.tipo==='parcela'?'Parcela '+p.parc+'/'+p.parcTotal:'Pagamento livre')+(p.conta?' · '+p.conta:'')+'</div></div>'
-      +'<div class="tx-right"><div class="tx-valor" style="color:#4ade80;">'+fR(p.valor)+'</div><div class="tx-data">'+fData(p.data)+'</div></div>';
+    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;padding:12px 14px;gap:10px;border-bottom:.5px solid var(--border2);';
+    var ic=document.createElement('div');ic.style.cssText='width:34px;height:34px;border-radius:11px;background:rgba(255,170,0,.15);color:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;';ic.innerHTML='&#x1F4B0;';
+    var info=document.createElement('div');info.style.cssText='flex:1;min-width:0;';
+    info.innerHTML='<div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.credor+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+(p.tipo==='parcela'?'Parcela '+p.parc+'/'+p.parcTotal:'Pagamento livre')+(p.conta?' · '+p.conta:'')+'</div>';
+    var right=document.createElement('div');right.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;';
+    var val=document.createElement('div');val.style.cssText='font-size:13px;font-weight:600;color:#4ade80;';val.textContent=fR(p.valor);
+    var dt=document.createElement('div');dt.style.cssText='font-size:10px;color:var(--text3);';dt.textContent=fData(p.data);
+    var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px;margin-top:2px;';
+    var bEd=document.createElement('button');bEd.style.cssText='background:var(--bg3);border:none;border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text3);cursor:pointer;';bEd.textContent='Editar';
+    bEd.addEventListener('click',(function(pp){return function(){fcM('sh-pagos');abreEditPagamentoDivida(pp.divId,pp);};})(p));
+    var bDel=document.createElement('button');bDel.style.cssText='background:rgba(255,68,102,.1);border:none;border-radius:6px;padding:3px 8px;font-size:10px;color:var(--red);cursor:pointer;';bDel.textContent='Excluir';
+    bDel.addEventListener('click',(function(pp){return function(){excluirPagamentoDivida(pp);};})(p));
+    btns.appendChild(bEd);btns.appendChild(bDel);
+    right.appendChild(val);right.appendChild(dt);right.appendChild(btns);
+    row.appendChild(ic);row.appendChild(info);row.appendChild(right);
     card.appendChild(row);
   });
   el.appendChild(card);
   var t=document.querySelector('#sh-pagos .sheet-title');if(t)t.textContent='Pagamentos de Dividas';
   abM('sh-pagos');
+}
+
+function excluirPagamentoDivida(p){
+  if(!confirm('Excluir este pagamento de '+fR(p.valor)+'?'))return;
+  var d=gd(),div=d.dividas.find(function(x){return x.id===p.divId;});
+  if(!div){toast('Divida nao encontrada','err');return;}
+  if(p.tipo==='livre'){
+    if(!div.historicoPag){toast('Pagamento nao encontrado','err');return;}
+    var old=div.historicoPag[p.idx];
+    if(!old){toast('Pagamento nao encontrado','err');return;}
+    if(old.contaId){var c=d.contas.find(function(x){return x.id===old.contaId;});if(c)c.saldo+=old.valor;}
+    div.valorAtual=Math.min(div.valorOriginal||0,(div.valorAtual||0)+old.valor);
+    if(div.status==='quitada'){div.status='aberto';delete div.dataQuit;}
+    div.historicoPag.splice(p.idx,1);
+  } else {
+    if(!div.acordo||!div.acordo.parcPagas){toast('Parcela nao encontrada','err');return;}
+    var oldP=div.acordo.parcPagas[p.idx];
+    if(!oldP){toast('Parcela nao encontrada','err');return;}
+    if(oldP.contaId){var c2=d.contas.find(function(x){return x.id===oldP.contaId;});if(c2)c2.saldo+=oldP.valor;}
+    if(div.status==='quitada'){div.status='acordo';delete div.dataQuit;div.acordo.ativo=true;}
+    div.acordo.parcPagas.splice(p.idx,1);
+    if(div.acordo.parcPagas.length>0){
+      var ult=div.acordo.parcPagas[div.acordo.parcPagas.length-1];
+      var prox=new Date(ult.data+'T12:00:00');prox.setMonth(prox.getMonth()+1);
+      div.acordo.proxVenc=prox.toISOString().split('T')[0];
+    } else {
+      div.acordo.proxVenc=div.acordo.proxVencOriginal||div.acordo.proxVenc;
+    }
+  }
+  save(d);toast('Pagamento excluido!','ok');abreTodosPagamentosDividas();renderPag();
 }
 
 var editPagDividaRef=null;
