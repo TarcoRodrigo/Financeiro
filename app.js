@@ -1005,6 +1005,7 @@ function excluirPagamentoDivida(p){
     var old=div.historicoPag[p.idx];
     if(!old){toast('Pagamento nao encontrado','err');return;}
     if(old.contaId){var c=d.contas.find(function(x){return x.id===old.contaId;});if(c)c.saldo+=old.valor;}
+    if(old.txId)d.transacoes=d.transacoes.filter(function(t){return t.id!==old.txId;});
     div.valorAtual=Math.min(div.valorOriginal||0,(div.valorAtual||0)+old.valor);
     if(div.status==='quitada'){div.status='aberto';delete div.dataQuit;}
     div.historicoPag.splice(p.idx,1);
@@ -1013,6 +1014,7 @@ function excluirPagamentoDivida(p){
     var oldP=div.acordo.parcPagas[p.idx];
     if(!oldP){toast('Parcela nao encontrada','err');return;}
     if(oldP.contaId){var c2=d.contas.find(function(x){return x.id===oldP.contaId;});if(c2)c2.saldo+=oldP.valor;}
+    if(oldP.txId)d.transacoes=d.transacoes.filter(function(t){return t.id!==oldP.txId;});
     if(div.status==='quitada'){div.status='acordo';delete div.dataQuit;div.acordo.ativo=true;}
     div.acordo.parcPagas.splice(p.idx,1);
     if(div.acordo.parcPagas.length>0){
@@ -1096,24 +1098,37 @@ function confirmaPagParcelaDivida(){
   var valor=pv('pag-div-val')||0;
 
   function registraLancamentoPagDiv(d,valor,data,contaId,desc){
-    var tx={id:uid(),desc:desc,tipo:'despesa',valor:valor,data:data,fixo:'variavel',cat:'outros',pagamentoDivida:true};
-    if(contaId){tx.contaId=contaId;var c=d.contas.find(function(x){return x.id===contaId;});if(c){if(!tx.pagamentos)tx.pagamentos={};tx.pagamentos[data.substring(0,7).replace('-','-')]=data;}}
-    else{if(!tx.pagamentos)tx.pagamentos={};tx.pagamentos[data.substring(0,7).replace('-','-')]=data;}
+    var txId=uid();
+    var tx={id:txId,desc:desc,tipo:'despesa',valor:valor,data:data,fixo:'variavel',cat:'outros',pagamentoDivida:true};
+    if(contaId)tx.contaId=contaId;
+    var chPag=data.substring(0,7);if(!tx.pagamentos)tx.pagamentos={};tx.pagamentos[chPag]=data;
     d.transacoes.push(tx);
+    return txId;
   }
 
   if(modo==='editar'){
     if(!valor||valor<=0){toast('Informe o valor','err');return;}
     var pag=editPagDividaRef;
+    var oldReg=null;
     if(pag.tipo==='livre'&&div.historicoPag){
-      var old=div.historicoPag[pag.idx];
-      if(old){
-        div.valorAtual=(div.valorAtual||0)+old.valor-valor;
-        old.valor=valor;old.data=data;old.contaId=contaId;
+      oldReg=div.historicoPag[pag.idx];
+      if(oldReg){
+        if(oldReg.contaId){var cOld=d.contas.find(function(x){return x.id===oldReg.contaId;});if(cOld)cOld.saldo+=oldReg.valor;}
+        div.valorAtual=(div.valorAtual||0)+oldReg.valor-valor;
+        if(contaId){var cNew=d.contas.find(function(x){return x.id===contaId;});if(cNew)cNew.saldo-=valor;}
+        oldReg.valor=valor;oldReg.data=data;oldReg.contaId=contaId;
+        var cNome=contaId?(d.contas.find(function(x){return x.id===contaId;})||{}).nome||'':'';
+        oldReg.conta=cNome;
+        if(oldReg.txId){var txE=d.transacoes.find(function(t){return t.id===oldReg.txId;});if(txE){txE.valor=valor;txE.data=data;txE.contaId=contaId||null;var chE=data.substring(0,7);txE.pagamentos={};txE.pagamentos[chE]=data;}}
       }
     } else if(pag.tipo==='parcela'&&div.acordo&&div.acordo.parcPagas){
-      var oldP=div.acordo.parcPagas[pag.idx];
-      if(oldP){oldP.valor=valor;oldP.data=data;oldP.conta=contaId;}
+      oldReg=div.acordo.parcPagas[pag.idx];
+      if(oldReg){
+        if(oldReg.contaId){var cOld2=d.contas.find(function(x){return x.id===oldReg.contaId;});if(cOld2)cOld2.saldo+=oldReg.valor;}
+        if(contaId){var cNew2=d.contas.find(function(x){return x.id===contaId;});if(cNew2)cNew2.saldo-=valor;}
+        oldReg.valor=valor;oldReg.data=data;oldReg.contaId=contaId;
+        if(oldReg.txId){var txE2=d.transacoes.find(function(t){return t.id===oldReg.txId;});if(txE2){txE2.valor=valor;txE2.data=data;txE2.contaId=contaId||null;var chE2=data.substring(0,7);txE2.pagamentos={};txE2.pagamentos[chE2]=data;}}
+      }
     }
     editPagDividaRef=null;
     document.getElementById('sh-pag-div').dataset.modo='parcela';
@@ -1128,8 +1143,8 @@ function confirmaPagParcelaDivida(){
     if(!div.historicoPag)div.historicoPag=[];
     var nomeC='';
     if(contaId){var cL=d.contas.find(function(x){return x.id===contaId;});if(cL){cL.saldo-=valor;nomeC=cL.nome||banco(cL.banco).nome;}}
-    div.historicoPag.push({data:data,valor:valor,conta:nomeC,contaId:contaId});
-    registraLancamentoPagDiv(d,valor,data,contaId,'Pgto divida - '+div.credor);
+    var txId=registraLancamentoPagDiv(d,valor,data,contaId,'Pgto divida - '+div.credor);
+    div.historicoPag.push({data:data,valor:valor,conta:nomeC,contaId:contaId,txId:txId});
     if(novoValor<=0){div.status='quitada';div.dataQuit=data;toast('Divida quitada automaticamente!','ok');}
     else{toast('Pagamento de '+fR(valor)+' registrado!','ok');}
     document.getElementById('sh-pag-div').dataset.modo='parcela';
@@ -1142,8 +1157,8 @@ function confirmaPagParcelaDivida(){
   var nomeC2='';
   if(contaId){var c2=d.contas.find(function(x){return x.id===contaId;});if(c2){c2.saldo-=parcVal;nomeC2=c2.nome||banco(c2.banco).nome;}}
   if(!ac.parcPagas)ac.parcPagas=[];
-  ac.parcPagas.push({data:data,valor:parcVal,conta:nomeC2,contaId:contaId});
-  registraLancamentoPagDiv(d,parcVal,data,contaId,'Parcela '+(ac.parcPagas.length)+'/'+ac.parcTotal+' - '+div.credor);
+  var txIdP=registraLancamentoPagDiv(d,parcVal,data,contaId,'Parcela '+(ac.parcPagas.length+1)+'/'+ac.parcTotal+' - '+div.credor);
+  ac.parcPagas.push({data:data,valor:parcVal,conta:nomeC2,contaId:contaId,txId:txIdP});
   if(ac.parcPagas.length>=ac.parcTotal){div.status='quitada';div.dataQuit=data;ac.ativo=false;toast('Divida quitada!','ok');}
   else{var prox=new Date(data+'T12:00:00');prox.setMonth(prox.getMonth()+1);ac.proxVenc=prox.toISOString().split('T')[0];toast('Parcela paga!','ok');}
   document.getElementById('sh-pag-div').dataset.modo='parcela';
