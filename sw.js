@@ -1,4 +1,4 @@
-var CACHE='fx86-v1';
+var CACHE='fx86-v2';
 var LISTA=['./','./index.html','./style.css','./app.js','./manifest.json','./icone-192.png','./icone-512.png'];
 function abrirCache(){return caches.open(CACHE);}
 self.addEventListener('install',function(ev){ev.waitUntil(abrirCache().then(function(cache){return cache.addAll(LISTA);}).then(function(){return self.skipWaiting();}));});
