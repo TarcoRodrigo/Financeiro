@@ -1,4 +1,4 @@
-// FinanceX v8.7.2
+// FinanceX v8.7.3
 'use strict';
 function mask(el){var v=el.value.replace(/\D/g,'');if(!v){el.value='';return;}v=(parseInt(v,10)/100).toFixed(2);el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function pv(id){var el=document.getElementById(id);if(!el)return 0;var v=el.value;if(!v)return 0;return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;}
@@ -161,6 +161,35 @@ function calcRitmo(m){
   var calc=calcMetaAporte(m);
   if(!calc)return null;
   return{ritmoAtual:ritmoAtual,necessario:calc.diario,ok:ritmoAtual>=calc.diario*0.9};
+}
+
+// --- MIGRACAO: gerar parcelas futuras para transacoes parceladas antigas ---
+function migrarParcelasAntigas(){
+  var d=gd(),novas=[],alterado=false;
+  d.transacoes.forEach(function(t){
+    if(!t.parcTotal||t.parcAtual>=t.parcTotal)return;
+    if(t.cartaoId)return;
+    // verificar se ja existem as parcelas seguintes
+    for(var pi=t.parcAtual+1;pi<=t.parcTotal;pi++){
+      var jaExiste=d.transacoes.some(function(x){
+        return x!==t&&x.desc===t.desc&&x.parcTotal===t.parcTotal&&x.parcAtual===pi&&x.cat===t.cat;
+      });
+      if(!jaExiste){
+        var dBase=new Date(t.data+'T12:00:00');
+        var dParc=new Date(dBase.getFullYear(),dBase.getMonth()+(pi-t.parcAtual),dBase.getDate());
+        var nova={id:uid(),desc:t.desc,tipo:t.tipo,valor:t.valor,data:dParc.toISOString().split('T')[0],
+          fixo:t.fixo,cat:t.cat,obs:t.obs||'',parcTotal:t.parcTotal,parcAtual:pi};
+        if(t.contaId)nova.contaId=t.contaId;
+        novas.push(nova);
+        alterado=true;
+      }
+    }
+  });
+  if(alterado){
+    novas.forEach(function(n){d.transacoes.push(n);});
+    save(d);
+    console.log('Migracao: '+novas.length+' parcelas geradas');
+  }
 }
 
 // --- MIGRACAO: vincular pagamentos antigos de dividas a transacoes ---
@@ -483,14 +512,14 @@ function rCartoesList(el,d){
     if(badgeTxt){var bst=document.createElement('span');bst.style.cssText='font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;background:'+badgeCor+'22;color:'+badgeCor+';';bst.textContent=badgeTxt;topR.appendChild(bst);}
     var arr=document.createElement('span');arr.style.cssText='font-size:20px;color:var(--text2);line-height:1;font-weight:300;';arr.textContent='>';topR.appendChild(arr);
     top.appendChild(topL);top.appendChild(topR);card.appendChild(top);
-    var vals=document.createElement('div');vals.style.cssText='display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;';
-    var vL=document.createElement('div');vL.innerHTML='<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Fatura atual</div><div style="font-size:18px;font-weight:300;color:var(--red);letter-spacing:-.5px;">'+fR(us)+'</div>';
-    var vR=document.createElement('div');vR.style.textAlign='right';vR.innerHTML='<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Disponivel</div><div style="font-size:14px;font-weight:500;color:'+(disp>0?'var(--accent)':'var(--red)')+';">'+fRs(disp)+'</div>';
-    vals.appendChild(vL);vals.appendChild(vR);card.appendChild(vals);
-    var barBg=document.createElement('div');barBg.style.cssText='height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:4px;';
-    var barFill=document.createElement('div');barFill.style.cssText='height:100%;width:'+Math.min(100,pctUs)+'%;background:'+barCor+';border-radius:2px;';
-    barBg.appendChild(barFill);card.appendChild(barBg);
-    var barInfo=document.createElement('div');barInfo.style.cssText='display:flex;justify-content:space-between;font-size:9px;color:var(--text3);';barInfo.innerHTML='<span>'+pctUs.toFixed(0)+'% do limite usado</span><span>Limite: '+fRs(c.limite)+'</span>';card.appendChild(barInfo);
+    var vals=document.createElement('div');vals.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;';
+    var v1=document.createElement('div');v1.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+    v1.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Fatura atual</div><div style="font-size:15px;font-weight:300;color:var(--red);letter-spacing:-.5px;">'+fR(us)+'</div>';
+    var v2=document.createElement('div');v2.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+    v2.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Limite total</div><div style="font-size:15px;font-weight:300;color:var(--text);letter-spacing:-.5px;">'+fR(c.limite)+'</div>';
+    var v3=document.createElement('div');v3.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+    v3.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Disponivel</div><div style="font-size:15px;font-weight:300;color:'+(disp>0?'var(--accent)':'var(--red)')+';letter-spacing:-.5px;">'+fR(disp)+'</div>';
+    vals.appendChild(v1);vals.appendChild(v2);vals.appendChild(v3);card.appendChild(vals);
     if(fatPendente){var bPag=document.createElement('button');bPag.style.cssText='align-self:flex-end;margin-top:8px;padding:6px 14px;background:rgba(255,68,102,.1);border:none;border-radius:20px;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;display:block;margin-left:auto;';bPag.textContent='Pagar fatura';bPag.addEventListener('click',(function(cid){return function(e){e.stopPropagation();confirmarFatura(cid);};})(c.id));card.appendChild(bPag);}
     card.addEventListener('click',(function(idx){return function(){verCartao(idx);};})(i));el.appendChild(card);
   });
@@ -509,14 +538,16 @@ function rCartaoDetalhe(el,d){
   var bEd=document.createElement('button');bEd.style.cssText='background:var(--bg3);border:none;border-radius:8px;padding:5px 10px;font-size:11px;color:var(--text2);cursor:pointer;flex-shrink:0;';bEd.textContent='Editar';bEd.onclick=function(){abreEditCartao(c.id);};
   hdr.appendChild(bdg);hdr.appendChild(hInfo);hdr.appendChild(bEd);el.appendChild(hdr);
   var hero=document.createElement('div');hero.style.cssText='background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:10px;';
-  var heroTop=document.createElement('div');heroTop.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;';
-  var fatL=document.createElement('div');fatL.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Fatura atual</div><div style="font-size:26px;font-weight:300;color:var(--red);letter-spacing:-1px;">'+fR(us)+'</div><div style="font-size:10px;color:'+(diff<=3?'var(--yellow)':'var(--text3)')+';margin-top:4px;">'+vencTxt+'</div>';
-  var fatR=document.createElement('div');fatR.style.textAlign='right';fatR.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Limite</div><div style="font-size:14px;font-weight:500;color:var(--text);">'+fR(c.limite)+'</div><div style="font-size:11px;color:'+(disp>0?'var(--accent)':'var(--red)')+';margin-top:4px;font-weight:600;">'+fR(disp)+' livre</div>';
-  heroTop.appendChild(fatL);heroTop.appendChild(fatR);hero.appendChild(heroTop);
-  var barBg=document.createElement('div');barBg.style.cssText='height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;';
-  var barFill=document.createElement('div');barFill.style.cssText='height:100%;width:'+Math.min(100,pctUs)+'%;background:'+barCor+';border-radius:3px;';
-  barBg.appendChild(barFill);hero.appendChild(barBg);
-  var barInfo=document.createElement('div');barInfo.style.cssText='display:flex;justify-content:space-between;font-size:9px;color:var(--text3);';barInfo.innerHTML='<span>'+pctUs.toFixed(0)+'% do limite usado</span>';hero.appendChild(barInfo);el.appendChild(hero);
+  var vencRow=document.createElement('div');vencRow.style.cssText='font-size:11px;color:'+(diff<=3?'var(--yellow)':'var(--text3)')+';margin-bottom:10px;';vencRow.textContent=vencTxt;
+  hero.appendChild(vencRow);
+  var vals3=document.createElement('div');vals3.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;';
+  var hv1=document.createElement('div');hv1.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+  hv1.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Fatura atual</div><div style="font-size:16px;font-weight:300;color:var(--red);letter-spacing:-.5px;">'+fR(us)+'</div>';
+  var hv2=document.createElement('div');hv2.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+  hv2.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Limite total</div><div style="font-size:16px;font-weight:300;color:var(--text);letter-spacing:-.5px;">'+fR(c.limite)+'</div>';
+  var hv3=document.createElement('div');hv3.style.cssText='background:var(--bg3);border-radius:10px;padding:10px;';
+  hv3.innerHTML='<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Disponivel</div><div style="font-size:16px;font-weight:300;color:'+(disp>0?'var(--accent)':'var(--red)')+';letter-spacing:-.5px;">'+fR(disp)+'</div>';
+  vals3.appendChild(hv1);vals3.appendChild(hv2);vals3.appendChild(hv3);hero.appendChild(vals3);el.appendChild(hero);
   var btns=document.createElement('div');btns.style.cssText='display:flex;gap:8px;margin-bottom:14px;';
   var bl=document.createElement('button');bl.className='sbtn';bl.style.cssText='flex:1;padding:11px;font-size:13px;margin:0;';bl.textContent='+ Lancar no cartao';bl.onclick=function(){abTxCC();};btns.appendChild(bl);
   if(fatPendente){var bPF=document.createElement('button');bPF.style.cssText='padding:11px 14px;background:rgba(255,68,102,.1);border:none;border-radius:var(--rsm);color:var(--red);font-size:13px;font-weight:600;cursor:pointer;';bPF.textContent='Pagar fatura';bPF.onclick=function(){confirmarFatura(c.id);};btns.appendChild(bPF);}
@@ -543,8 +574,17 @@ function buildGraficoCC(el,c,txs){
 function buildLancamentosCC(el,c,txs){
   var mm=ccMesSel.m,aa=ccMesSel.a,hj2=new Date(),isFut=aa>hj2.getFullYear()||(aa===hj2.getFullYear()&&mm>hj2.getMonth());
   var diretos=txs.filter(function(t){if(!t.cartaoId||t.cartaoId!==c.id)return false;var d=new Date(t.data+'T12:00:00');return d.getMonth()===mm&&d.getFullYear()===aa;});
+  var diretosIds=diretos.map(function(t){return t.id;});
   var parcelas=[];
-  if(isFut){txs.filter(function(t){if(!t.cartaoId||t.cartaoId!==c.id||!t.parcTotal)return false;var d=new Date(t.data+'T12:00:00'),diff=(aa-d.getFullYear())*12+(mm-d.getMonth());return diff>0&&diff<=(t.parcTotal-t.parcAtual);}).forEach(function(t){var d=new Date(t.data+'T12:00:00'),diff=(aa-d.getFullYear())*12+(mm-d.getMonth());parcelas.push({t:t,n:t.parcAtual+diff});});}
+  txs.filter(function(t){
+    if(!t.cartaoId||t.cartaoId!==c.id||!t.parcTotal)return false;
+    if(diretosIds.indexOf(t.id)>=0)return false;
+    var d=new Date(t.data+'T12:00:00'),diff=(aa-d.getFullYear())*12+(mm-d.getMonth());
+    return diff>0&&diff<=(t.parcTotal-t.parcAtual);
+  }).forEach(function(t){
+    var d=new Date(t.data+'T12:00:00'),diff=(aa-d.getFullYear())*12+(mm-d.getMonth());
+    parcelas.push({t:t,n:t.parcAtual+diff});
+  });
   var total=diretos.reduce(function(a,t){return a+t.valor;},0)+parcelas.reduce(function(a,p){return a+p.t.valor;},0);
   var label=MC[mm]+' '+aa+(isFut?' (Projetado)':'');
   var ltit=document.createElement('div');ltit.style.cssText='display:flex;justify-content:space-between;align-items:center;margin:14px 0 10px;';
@@ -1567,6 +1607,7 @@ document.getElementById('mesLabel').textContent=MC[mes]+'/'+ano;
 })();
 (function(){var d=gd();if(!d.ultimoBackup){d.ultimoBackup=new Date().toISOString();save(d);}})();
 migrarPagamentosAntigos();
+migrarParcelasAntigas();
 pushState('app');
 renderPag();
 setTimeout(checkBackup,1000);
