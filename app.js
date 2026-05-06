@@ -1,4 +1,4 @@
-// FinanceX v8.7
+// FinanceX v8.7.1
 'use strict';
 function mask(el){var v=el.value.replace(/\D/g,'');if(!v){el.value='';return;}v=(parseInt(v,10)/100).toFixed(2);el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function pv(id){var el=document.getElementById(id);if(!el)return 0;var v=el.value;if(!v)return 0;return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;}
@@ -56,21 +56,31 @@ function gastosCartaoMes(txs,cartoes){return txs.filter(function(t){if(!t.cartao
 // Despesa em conta corrente (contaId): paga automaticamente se data <= hoje
 // Despesa sem conta (nem cartao): controle manual via t.pagamentos[ch]
 // Despesa em cartao: gerenciada via faturas (nao usa isPago/isPend)
+// chave de pagamento baseada no mes da TRANSACAO (nao do mes navegado)
+function chTx(t){var d=new Date(t.data+'T12:00:00');return d.getMonth()+'-'+d.getFullYear();}
+function foiPagoHoje(t){
+  // lancado hoje = dataCad existe e é igual a hoje
+  if(!t.dataCad)return false;
+  var hj=hoje0(),dc=dataD(t.dataCad);
+  return dc.getTime()===hj.getTime()&&dataD(t.data).getTime()===hj.getTime();
+}
 function isPago(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return false;
-  if(t.contaId)return dataD(t.data)<=hoje0();
-  if(t.pagamentos&&t.pagamentos[ch()])return true;
-  return dataD(t.data)<=hoje0();
+  // lancado hoje com vencimento hoje: pago automatico
+  if(foiPagoHoje(t))return true;
+  // confirmado manualmente: chave pelo mes da transacao
+  if(t.pagamentos&&t.pagamentos[chTx(t)])return true;
+  return false;
 }
 function isPend(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return true;
-  if(t.contaId)return dataD(t.data)>hoje0();
-  if(t.pagamentos&&t.pagamentos[ch()])return false;
-  return dataD(t.data)>hoje0();
+  if(foiPagoHoje(t))return false;
+  if(t.pagamentos&&t.pagamentos[chTx(t)])return false;
+  return true;
 }
 function aPagar(txs){return txMes(txs).filter(isPend);}
 function getFatPend(cartoes,txs){
@@ -205,9 +215,9 @@ function mkTxItem(t){
   if(t.tipo==='despesa'&&!t.cartaoId){
     var bdg=document.createElement('span');
     if(t.contaId){
-      // conta corrente: automatico
-      if(dataD(t.data)<=hoje0()){bdg.className='badge-pago';bdg.style.marginLeft='4px';bdg.textContent='Pago';}
-      else{bdg.className='badge-pend';bdg.style.marginLeft='4px';bdg.textContent='Agendado';}
+      if(isPago(t)){bdg.className='badge-pago';bdg.style.marginLeft='4px';bdg.textContent='Pago';}
+      else if(dataD(t.data)<hoje0()){bdg.className='badge-atraso';bdg.style.marginLeft='4px';bdg.textContent='Atrasado';}
+      else{bdg.className='badge-pend';bdg.style.marginLeft='4px';bdg.textContent='Pendente';}
     } else {
       var chv=ch(),pg=t.pagamentos&&t.pagamentos[chv];
       if(pg){var at=dataD(pg)>dataD(t.data);bdg.className=at?'badge-atraso':'badge-pago';bdg.style.marginLeft='4px';bdg.textContent=at?'Atraso '+fData(pg):'Pago '+fData(pg);}
@@ -1123,12 +1133,27 @@ function salvaTx(){
     }
     toast('Atualizado!','ok');
   } else {
-    var tx={id:uid(),desc:desc,tipo:tipoTx,valor:valor,data:data,fixo:fixo,cat:cat,obs:obs};
+    var hoje0Str=new Date().toISOString().split('T')[0];
+    var tx={id:uid(),desc:desc,tipo:tipoTx,valor:valor,data:data,fixo:fixo,cat:cat,obs:obs,dataCad:hoje0Str};
     if(fotoB64)tx.foto=fotoB64;
     if(cv.startsWith('cartao:')){tx.cartaoId=cv.replace('cartao:','');}
     else{tx.contaId=cv.replace('conta:','');var ac3=d.contas.find(function(x){return x.id===tx.contaId;});if(ac3)ac3.saldo+=tipoTx==='receita'?valor:-valor;}
-    if(ptRaw>0){tx.parcTotal=ptRaw;tx.parcAtual=pa||1;}
-    d.transacoes.push(tx);
+    if(ptRaw>0){
+      tx.parcTotal=ptRaw;tx.parcAtual=pa||1;
+      // gerar parcelas restantes automaticamente
+      d.transacoes.push(tx);
+      var dBase=new Date(data+'T12:00:00');
+      for(var pi=pa+1;pi<=ptRaw;pi++){
+        var dParc=new Date(dBase.getFullYear(),dBase.getMonth()+(pi-pa),dBase.getDate());
+        var dataParc=dParc.toISOString().split('T')[0];
+        var txParc={id:uid(),desc:desc,tipo:tipoTx,valor:valor,data:dataParc,fixo:fixo,cat:cat,obs:obs,dataCad:hoje0Str,parcTotal:ptRaw,parcAtual:pi};
+        if(tx.cartaoId)txParc.cartaoId=tx.cartaoId;
+        if(tx.contaId)txParc.contaId=tx.contaId;
+        d.transacoes.push(txParc);
+      }
+    } else {
+      d.transacoes.push(tx);
+    }
     toast('Salvo!','ok');
   }
   save(d);fcM('sh-tx');renderPag();
@@ -1140,7 +1165,7 @@ function marcarPagoTx(){
     if(t.pagoManual===false){delete t.pagoManual;toast('Restaurado para Saidas','ok');}
     else{t.pagoManual=false;toast('Movido para A Pagar!','ok');}
   } else {
-    var chv2=ch();if(!t.pagamentos)t.pagamentos={};
+    var chv2=chTx(t);if(!t.pagamentos)t.pagamentos={};
     if(t.pagamentos[chv2]){delete t.pagamentos[chv2];toast('Pagamento desfeito','ok');}
     else{t.pagamentos[chv2]=new Date().toISOString().split('T')[0];toast('Marcado como pago!','ok');}
   }
@@ -1161,7 +1186,7 @@ function confirmaPag(){
     save(d);fcM('sh-pag');toast(at?'Pago em atraso':'Fatura paga!',at?'warn':'ok');renderPag();return;
   }
   var d=gd(),t=d.transacoes.find(function(x){return x.id===pagTxId;});
-  if(t){if(!t.pagamentos)t.pagamentos={};t.pagamentos[ch()]=data;}
+  if(t){if(!t.pagamentos)t.pagamentos={};t.pagamentos[chTx(t)]=data;}
   save(d);fcM('sh-pag');var at2=t&&dataD(data)>dataD(t.data);toast(at2?'Pago em atraso':'Confirmado!',at2?'warn':'ok');renderPag();
 }
 
@@ -1255,7 +1280,7 @@ function abreAcoesSaida(id){
 function moverParaAPagar(id){
   var d=gd(),t=d.transacoes.find(function(x){return x.id===id;});if(!t)return;
   t.pagoManual=false;
-  if(t.pagamentos&&t.pagamentos[ch()])delete t.pagamentos[ch()];
+  if(t.pagamentos&&t.pagamentos[chTx(t)])delete t.pagamentos[chTx(t)];
   save(d);fcM('sh-pagos');toast('Movido para A Pagar!','ok');renderPag();
 }
 
