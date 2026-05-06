@@ -1,4 +1,4 @@
-// FinanceX v8.7.1
+// FinanceX v8.7.2
 'use strict';
 function mask(el){var v=el.value.replace(/\D/g,'');if(!v){el.value='';return;}v=(parseInt(v,10)/100).toFixed(2);el.value=v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function pv(id){var el=document.getElementById(id);if(!el)return 0;var v=el.value;if(!v)return 0;return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;}
@@ -58,20 +58,22 @@ function gastosCartaoMes(txs,cartoes){return txs.filter(function(t){if(!t.cartao
 // Despesa em cartao: gerenciada via faturas (nao usa isPago/isPend)
 // chave de pagamento baseada no mes da TRANSACAO (nao do mes navegado)
 function chTx(t){var d=new Date(t.data+'T12:00:00');return d.getMonth()+'-'+d.getFullYear();}
+function temPagamento(t){
+  // aceita qualquer chave em pagamentos (compatibilidade com dados antigos)
+  if(!t.pagamentos)return false;
+  return Object.keys(t.pagamentos).length>0;
+}
 function foiPagoHoje(t){
-  // lancado hoje = dataCad existe e é igual a hoje
   if(!t.dataCad)return false;
-  var hj=hoje0(),dc=dataD(t.dataCad);
-  return dc.getTime()===hj.getTime()&&dataD(t.data).getTime()===hj.getTime();
+  var hj=hoje0();
+  return dataD(t.dataCad).getTime()===hj.getTime()&&dataD(t.data).getTime()===hj.getTime();
 }
 function isPago(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return false;
-  // lancado hoje com vencimento hoje: pago automatico
   if(foiPagoHoje(t))return true;
-  // confirmado manualmente: chave pelo mes da transacao
-  if(t.pagamentos&&t.pagamentos[chTx(t)])return true;
+  if(temPagamento(t))return true;
   return false;
 }
 function isPend(t){
@@ -79,10 +81,20 @@ function isPend(t){
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return true;
   if(foiPagoHoje(t))return false;
-  if(t.pagamentos&&t.pagamentos[chTx(t)])return false;
+  if(temPagamento(t))return false;
   return true;
 }
-function aPagar(txs){return txMes(txs).filter(isPend);}
+function aPagar(txs){
+  var hj=hoje0();
+  // inclui transacoes do mes navegado E atrasadas de meses anteriores
+  return txs.filter(function(t){
+    if(!isPend(t))return false;
+    var dTx=new Date(t.data+'T12:00:00');
+    var mesmaMes=dTx.getMonth()===mes&&dTx.getFullYear()===ano;
+    var atrasada=dataD(t.data)<hj;
+    return mesmaMes||atrasada;
+  });
+}
 function getFatPend(cartoes,txs){
   var result=[];
   cartoes.forEach(function(c){
@@ -1165,9 +1177,14 @@ function marcarPagoTx(){
     if(t.pagoManual===false){delete t.pagoManual;toast('Restaurado para Saidas','ok');}
     else{t.pagoManual=false;toast('Movido para A Pagar!','ok');}
   } else {
-    var chv2=chTx(t);if(!t.pagamentos)t.pagamentos={};
-    if(t.pagamentos[chv2]){delete t.pagamentos[chv2];toast('Pagamento desfeito','ok');}
-    else{t.pagamentos[chv2]=new Date().toISOString().split('T')[0];toast('Marcado como pago!','ok');}
+    if(temPagamento(t)){
+      t.pagamentos={};toast('Pagamento desfeito','ok');
+    } else {
+      if(!t.pagamentos)t.pagamentos={};
+      t.pagamentos[chTx(t)]=new Date().toISOString().split('T')[0];
+      if(t.pagoManual===false)delete t.pagoManual;
+      toast('Marcado como pago!','ok');
+    }
   }
   save(d);fcM('sh-tx');renderPag();
 }
@@ -1186,7 +1203,11 @@ function confirmaPag(){
     save(d);fcM('sh-pag');toast(at?'Pago em atraso':'Fatura paga!',at?'warn':'ok');renderPag();return;
   }
   var d=gd(),t=d.transacoes.find(function(x){return x.id===pagTxId;});
-  if(t){if(!t.pagamentos)t.pagamentos={};t.pagamentos[chTx(t)]=data;}
+  if(t){
+    if(!t.pagamentos)t.pagamentos={};
+    t.pagamentos[chTx(t)]=data;
+    if(t.pagoManual===false)delete t.pagoManual;
+  }
   save(d);fcM('sh-pag');var at2=t&&dataD(data)>dataD(t.data);toast(at2?'Pago em atraso':'Confirmado!',at2?'warn':'ok');renderPag();
 }
 
@@ -1280,7 +1301,7 @@ function abreAcoesSaida(id){
 function moverParaAPagar(id){
   var d=gd(),t=d.transacoes.find(function(x){return x.id===id;});if(!t)return;
   t.pagoManual=false;
-  if(t.pagamentos&&t.pagamentos[chTx(t)])delete t.pagamentos[chTx(t)];
+  t.pagamentos={};
   save(d);fcM('sh-pagos');toast('Movido para A Pagar!','ok');renderPag();
 }
 
