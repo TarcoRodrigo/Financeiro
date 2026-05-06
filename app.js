@@ -305,7 +305,7 @@ function rInicio(el){
   if(totalAt>0){var al=document.createElement('div');al.className='alerta-atraso';al.innerHTML='<div style="font-size:18px;flex-shrink:0;">&#9888;</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--red);">'+totalAt+' conta(s) em atraso</div><div style="font-size:11px;color:var(--red);opacity:.8;margin-top:2px;">'+fR(valorAt)+' vencidos</div></div><div style="font-size:12px;color:var(--red);font-weight:600;">Ver &#8250;</div>';al.addEventListener('click',function(){abreAPagar();});el.appendChild(al);}
 
   var grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px;';
-  var mE=document.createElement('div');mE.className='metrica';mE.innerHTML='<div class="metrica-label">Entradas</div><div class="metrica-val" style="color:var(--accent);">'+(privado?'R$ ****':fR(rec))+'</div>';mE.addEventListener('click',function(){abrePagos();});
+  var mE=document.createElement('div');mE.className='metrica';mE.innerHTML='<div class="metrica-label">Entradas</div><div class="metrica-val" style="color:var(--accent);">'+(privado?'R$ ****':fR(rec))+'</div>';mE.addEventListener('click',function(){abreEntradas();});
   var mS=document.createElement('div');mS.className='metrica';mS.innerHTML='<div class="metrica-label">Saidas</div><div class="metrica-val" style="color:var(--red);">'+(privado?'R$ ****':fR(depPagoTotal))+'</div>';mS.addEventListener('click',function(){abrePagos();});
   grid.appendChild(mE);grid.appendChild(mS);el.appendChild(grid);
 
@@ -1278,6 +1278,25 @@ function abreAPagar(){
   }
   function mkGrupo(lista,titulo,cor){if(!lista.length)return;var total=lista.reduce(function(a,item){return a+(item.tipo==='tx'?item.t.valor:item.tipo==='divparc'?item.p.valor:item.f.valor);},0);var sec=document.createElement('div');sec.style.marginBottom='14px';var hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+cor+'18;border-left:3px solid '+cor+';border-radius:0 var(--rsm) var(--rsm) 0;margin-bottom:8px;';hdr.innerHTML='<span style="font-size:12px;font-weight:700;color:'+cor+';">'+titulo+' ('+lista.length+')</span><span style="font-size:13px;font-weight:700;color:'+cor+';">'+fR(total)+'</span>';sec.appendChild(hdr);var card=document.createElement('div');card.className='card';card.style.padding='0';lista.forEach(function(item){card.appendChild(mkItem(item,cor));});sec.appendChild(card);el.appendChild(sec);}
   mkGrupo(atrasadas,'Atrasadas','#ff4466');mkGrupo(deHoje,'Hoje','#ffaa00');mkGrupo(futuras,'Proximas','#94a3b8');abM('sh-apagar');
+}
+
+// --- ENTRADAS DO MES ---
+function abreEntradas(){
+  var d=gd(),ts=txMes(d.transacoes);
+  var receitas=ts.filter(function(t){return t.tipo==='receita';}).sort(function(a,b){return new Date(b.data)-new Date(a.data);});
+  var el=document.getElementById('lista-pagos');if(!el)return;el.innerHTML='';
+  if(receitas.length===0){el.innerHTML='<div class="tx-empty">Nenhuma receita este mes</div>';}
+  else{
+    var total=receitas.reduce(function(a,t){return a+t.valor;},0);
+    var summ=document.createElement('div');summ.style.cssText='background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+    summ.innerHTML='<span style="font-size:12px;color:var(--text2);">'+receitas.length+' lancamentos</span><span style="font-size:16px;font-weight:300;color:var(--accent);">'+fR(total)+'</span>';
+    el.appendChild(summ);
+    var card=document.createElement('div');card.className='card';
+    receitas.forEach(function(t){card.appendChild(mkTxItem(t));});
+    el.appendChild(card);
+  }
+  var tt=document.querySelector('#sh-pagos .sheet-title');if(tt)tt.textContent='Entradas do Mes';
+  abM('sh-pagos');
 }
 
 // --- PAGOS DO MES ---
