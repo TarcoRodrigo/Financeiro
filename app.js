@@ -59,28 +59,18 @@ function isPago(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return false;
-  if(t.contaId){
-    var hj=hoje0(),dataLanc=dataD(t.data);
-    if(dataLanc.getTime()===hj.getTime())return true;
-    return t.pagoManual===true;
-  }
+  if(t.contaId)return dataD(t.data)<=hoje0();
   if(t.pagamentos&&t.pagamentos[ch()])return true;
-  return dataD(t.data).getTime()===hoje0().getTime();
+  return dataD(t.data)<=hoje0();
 }
 function isPend(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
   if(t.pagoManual===false)return true;
-  if(t.contaId){
-    var hj=hoje0(),dataLanc=dataD(t.data);
-    if(dataLanc.getTime()===hj.getTime())return false;
-    if(dataLanc<=hj)return t.pagoManual!==true;
-    return true;
-  }
+  if(t.contaId)return dataD(t.data)>hoje0();
   if(t.pagamentos&&t.pagamentos[ch()])return false;
-  return dataD(t.data)>=hoje0();
+  return dataD(t.data)>hoje0();
 }
-
 function aPagar(txs){return txMes(txs).filter(isPend);}
 function getFatPend(cartoes,txs){
   var result=[];
@@ -1215,10 +1205,57 @@ function abrePagos(){
   summ.innerHTML='<span style="font-size:12px;color:var(--text2);">'+itens+' lancamentos</span><span style="font-size:16px;font-weight:300;color:var(--accent);">'+fR(total)+'</span>';el.appendChild(summ);
   var card=document.createElement('div');card.className='card';
   fatPagas.forEach(function(c){var cf=cicloFechado(c),chv=cf.chave,us=usadoCCCiclo(c,d.transacoes,cf),at=c.faturasAtraso&&c.faturasAtraso[chv],b=banco(c.banco);var row=document.createElement('div');row.className='tx-item';row.innerHTML='<div class="tx-icone" style="background:'+b.cor+'22;color:'+b.cor+'">&#x1F4B3;</div><div class="tx-info"><div class="tx-nome">Fatura '+(c.nome||b.nome)+'</div><div class="tx-cat">Cartao <span class="'+(at?'badge-atraso':'badge-pago')+'">'+(at?'Pago em atraso '+fData(c.faturas[chv]):'Pago '+fData(c.faturas[chv]))+'</span></div></div><div class="tx-right"><div class="tx-valor r">-'+fR(us)+'</div></div>';card.appendChild(row);});
-  pagos.forEach(function(t){card.appendChild(mkTxItem(t));});
+  pagos.forEach(function(t){
+    var row=mkTxItem(t);
+    (function(tid){row.addEventListener('click',function(){abreAcoesSaida(tid);});})(t.id);
+    card.appendChild(row);
+  });
   el.appendChild(card);
   var tt=document.querySelector('#sh-pagos .sheet-title');if(tt)tt.textContent='Pagamentos do Mes';
   abM('sh-pagos');
+}
+
+// --- ACOES DE SAIDA (mini menu) ---
+function abreAcoesSaida(id){
+  var d=gd(),t=d.transacoes.find(function(x){return x.id===id;});if(!t)return;
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:flex-end;';
+  var sheet=document.createElement('div');
+  sheet.style.cssText='width:100%;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;';
+  var titulo=document.createElement('div');titulo.style.cssText='font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';titulo.textContent=t.desc;
+  var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:var(--text3);margin-bottom:18px;';sub.textContent=fR(t.valor)+' · '+fData(t.data);
+  function fechar(){document.body.removeChild(overlay);}
+  function mkBtn(ic,label,cor,fn){
+    var b=document.createElement('div');
+    b.style.cssText='display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:.5px solid var(--border2);cursor:pointer;';
+    b.innerHTML='<div style="width:36px;height:36px;border-radius:10px;background:'+cor+'18;display:flex;align-items:center;justify-content:center;font-size:16px;">'+ic+'</div><div style="font-size:14px;color:'+cor+';font-weight:500;">'+label+'</div>';
+    b.addEventListener('click',function(){fechar();fn();});
+    return b;
+  }
+  sheet.appendChild(titulo);
+  sheet.appendChild(sub);
+  sheet.appendChild(mkBtn('&#x270F;','Editar despesa','var(--accent)',function(){fcM('sh-pagos');abreEditTx(id);}));
+  sheet.appendChild(mkBtn('&#x21A9;','Mover para A Pagar','var(--yellow)',function(){moverParaAPagar(id);}));
+  sheet.appendChild(mkBtn('&#x1F5D1;','Excluir','var(--red)',function(){
+    if(!confirm('Excluir esta despesa?'))return;
+    var d2=gd(),idx=d2.transacoes.findIndex(function(x){return x.id===id;});
+    if(idx>=0){var tx=d2.transacoes[idx];if(tx.contaId){var c=d2.contas.find(function(x){return x.id===tx.contaId;});if(c)c.saldo-=tx.tipo==='receita'?tx.valor:-tx.valor;}d2.transacoes.splice(idx,1);}
+    save(d2);fcM('sh-pagos');toast('Excluido!','ok');renderPag();
+  }));
+  var bCancel=document.createElement('div');
+  bCancel.style.cssText='text-align:center;padding:14px;font-size:14px;color:var(--text3);cursor:pointer;margin-top:4px;';
+  bCancel.textContent='Cancelar';
+  bCancel.addEventListener('click',fechar);
+  sheet.appendChild(bCancel);
+  overlay.appendChild(sheet);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)fechar();});
+  document.body.appendChild(overlay);
+}
+function moverParaAPagar(id){
+  var d=gd(),t=d.transacoes.find(function(x){return x.id===id;});if(!t)return;
+  t.pagoManual=false;
+  if(t.pagamentos&&t.pagamentos[ch()])delete t.pagamentos[ch()];
+  save(d);fcM('sh-pagos');toast('Movido para A Pagar!','ok');renderPag();
 }
 
 // --- CONTAS ---
