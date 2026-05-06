@@ -58,16 +58,27 @@ function gastosCartaoMes(txs,cartoes){return txs.filter(function(t){if(!t.cartao
 function isPago(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
-  if(t.contaId)return dataD(t.data)<=hoje0();
+  if(t.pagoManual===false)return false;
+  if(t.contaId){
+    var hj=hoje0(),dataLanc=dataD(t.data);
+    if(dataLanc.getTime()===hj.getTime())return true;
+    return t.pagoManual===true;
+  }
   if(t.pagamentos&&t.pagamentos[ch()])return true;
-  return dataD(t.data)<=hoje0();
+  return dataD(t.data).getTime()===hoje0().getTime();
 }
 function isPend(t){
   if(t.tipo!=='despesa')return false;
   if(t.cartaoId)return false;
-  if(t.contaId)return dataD(t.data)>hoje0();
+  if(t.pagoManual===false)return true;
+  if(t.contaId){
+    var hj=hoje0(),dataLanc=dataD(t.data);
+    if(dataLanc.getTime()===hj.getTime())return false;
+    if(dataLanc<=hj)return t.pagoManual!==true;
+    return true;
+  }
   if(t.pagamentos&&t.pagamentos[ch()])return false;
-  return dataD(t.data)>hoje0();
+  return dataD(t.data)>=hoje0();
 }
 
 function aPagar(txs){return txMes(txs).filter(isPend);}
@@ -1083,11 +1094,23 @@ function abreEditTx(id){
   setTimeout(function(){var conta=document.getElementById('tx-conta');if(!conta)return;var val=t.contaId?'conta:'+t.contaId:t.cartaoId?'cartao:'+t.cartaoId:'';if(!val)return;for(var i=0;i<conta.options.length;i++){if(conta.options[i].value===val){conta.selectedIndex=i;break;}}},50);
   var btnPg=document.getElementById('btn-pagar-tx');
   if(btnPg){
-    // botao pagar: so para despesas sem conta corrente e sem cartao
-    var semConta=t.tipo==='despesa'&&!t.cartaoId&&!t.contaId;
-    var chv2=ch(),jaPago=semConta&&t.pagamentos&&t.pagamentos[chv2];
-    btnPg.style.display=semConta?'block':'none';
-    if(semConta){btnPg.textContent=jaPago?'Desfazer pagamento':'Marcar como pago';btnPg.style.background=jaPago?'rgba(148,163,184,.1)':'rgba(0,212,255,.1)';btnPg.style.color=jaPago?'var(--text3)':'var(--accent)';}
+    // botao pagar: para despesas sem cartao (com ou sem conta corrente)
+    var ehDespSemCartao=t.tipo==='despesa'&&!t.cartaoId;
+    var jaPago=false;
+    if(ehDespSemCartao){
+      if(t.contaId){
+        jaPago=t.pagoManual!==false&&(t.pagoManual===true||dataD(t.data)<=hoje0());
+      } else {
+        var chv2=ch();
+        jaPago=!!(t.pagamentos&&t.pagamentos[chv2]);
+      }
+    }
+    btnPg.style.display=ehDespSemCartao?'block':'none';
+    if(ehDespSemCartao){
+      btnPg.textContent=jaPago?'Desfazer pagamento':'Marcar como pago';
+      btnPg.style.background=jaPago?'rgba(148,163,184,.1)':'rgba(0,212,255,.1)';
+      btnPg.style.color=jaPago?'var(--text3)':'var(--accent)';
+    }
   }
   abM('sh-tx');
 }
@@ -1120,10 +1143,16 @@ function salvaTx(){
   save(d);fcM('sh-tx');renderPag();
 }
 function marcarPagoTx(){
-  if(!editTxId)return;var d=gd(),t=d.transacoes.find(function(x){return x.id===editTxId;});if(!t)return;
-  var chv2=ch();if(!t.pagamentos)t.pagamentos={};
-  if(t.pagamentos[chv2]){delete t.pagamentos[chv2];toast('Pagamento desfeito','ok');}
-  else{t.pagamentos[chv2]=new Date().toISOString().split('T')[0];toast('Marcado como pago!','ok');}
+  if(!editTxId)return;
+  var d=gd(),t=d.transacoes.find(function(x){return x.id===editTxId;});if(!t)return;
+  if(t.contaId){
+    if(t.pagoManual===false){delete t.pagoManual;toast('Restaurado para Saidas','ok');}
+    else{t.pagoManual=false;toast('Movido para A Pagar!','ok');}
+  } else {
+    var chv2=ch();if(!t.pagamentos)t.pagamentos={};
+    if(t.pagamentos[chv2]){delete t.pagamentos[chv2];toast('Pagamento desfeito','ok');}
+    else{t.pagamentos[chv2]=new Date().toISOString().split('T')[0];toast('Marcado como pago!','ok');}
+  }
   save(d);fcM('sh-tx');renderPag();
 }
 function deletaTx(){if(!editTxId)return;if(!confirm('Excluir?'))return;var d=gd(),idx=d.transacoes.findIndex(function(t){return t.id===editTxId;});if(idx>=0){var t=d.transacoes[idx];if(t.contaId){var c=d.contas.find(function(x){return x.id===t.contaId;});if(c)c.saldo-=t.tipo==='receita'?t.valor:-t.valor;}d.transacoes.splice(idx,1);}save(d);fcM('sh-tx');toast('Excluido!','ok');renderPag();}
