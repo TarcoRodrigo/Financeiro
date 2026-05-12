@@ -343,7 +343,7 @@ function rInicio(el){
     var apC=document.createElement('div');apC.className='card';apC.style.marginBottom='22px';
     var liAP=[];
     fatsPend.forEach(function(f){var diff=Math.round((dataD(f.dataVenc)-hj)/(864e5));liAP.push({tipo:'fat',f:f,diff:diff});});
-    fpend.forEach(function(t){var diff=Math.round((dataD(t.data)-hj)/(864e5));liAP.push({tipo:'tx',t:t,diff:diff});});
+    fpend.forEach(function(t){var diff=Math.round((dataD(t.data)-hj)/(864e5));if(diff>=0)liAP.push({tipo:'tx',t:t,diff:diff});});
     parcDiv.forEach(function(p){var diff=Math.round((dataD(p.dataVenc)-hj)/(864e5));liAP.push({tipo:'divparc',p:p,diff:diff});});
     liAP.sort(function(a,b){return a.diff-b.diff;});
     liAP.slice(0,5).forEach(function(item,idx){
@@ -364,7 +364,11 @@ function rInicio(el){
       var btn=document.createElement('button');btn.className='pagar-btn '+(diff<0?'red':diff===0?'yellow':'gray');btn.textContent='Pagar';
       if(item.tipo==='fat'){btn.addEventListener('click',(function(cid){return function(e){e.stopPropagation();confirmarFatura(cid);};})(item.f.cartaoId));}
       else if(item.tipo==='divparc'){btn.addEventListener('click',(function(pid){return function(e){e.stopPropagation();abrePagParcelaDivida(pid);};})(item.p.dividaId));}
-      else{btn.addEventListener('click',(function(tid){return function(e){e.stopPropagation();abrePagTx(tid);};})(item.t.id));}
+      else{
+        btn.addEventListener('click',(function(tid){return function(e){e.stopPropagation();abrePagTx(tid);};})(item.t.id));
+        // clicar no row abre mini menu igual ao de saidas
+        (function(tid){row.addEventListener('click',function(){abreAcoesSaida(tid);});})(item.t.id);
+      }
       right.appendChild(vEl);right.appendChild(btn);row.appendChild(ic);row.appendChild(info);row.appendChild(right);apC.appendChild(row);
     });
     if(liAP.length>5){var mais=document.createElement('div');mais.style.cssText='text-align:center;padding:10px;border-top:.5px solid var(--border2);font-size:12px;color:var(--accent);cursor:pointer;';mais.textContent='Ver mais '+(liAP.length-5)+' >';mais.addEventListener('click',function(){abreAPagar();});apC.appendChild(mais);}
