@@ -343,15 +343,15 @@
       <input type="number" id="ac-parc" placeholder="Ex: 12" min="1" oninput="calcValParc()">
     </div>
     <div>
-      <label class="form-label">Valor por parcela</label>
-      <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" readonly style="opacity:.7;">
+      <label class="form-label">Valor por parcela (R$)</label>
+      <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcDesconto()">
     </div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     <div>
       <label class="form-label">Desconto obtido (R$)</label>
-      <input type="text" id="ac-desc" inputmode="numeric" placeholder="Calculado auto" readonly style="opacity:.7;">
+      <input type="text" id="ac-desc" inputmode="numeric" placeholder="Calculado auto" readonly style="opacity:.6;">
     </div>
     <div>
       <label class="form-label">Data do acordo</label>
