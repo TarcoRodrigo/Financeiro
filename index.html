@@ -328,12 +328,12 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     <div>
-      <label class="form-label">Valor negociado (R$)</label>
+      <label class="form-label">Valor do acordo (R$)</label>
       <input type="text" id="ac-total" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
     </div>
     <div>
-      <label class="form-label">Desconto obtido (R$)</label>
-      <input type="text" id="ac-desc" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
+      <label class="form-label">Entrada paga (R$)</label>
+      <input type="text" id="ac-entrada" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
     </div>
   </div>
 
@@ -345,6 +345,17 @@
     <div>
       <label class="form-label">Valor por parcela</label>
       <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" readonly style="opacity:.7;">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div>
+      <label class="form-label">Desconto obtido (R$)</label>
+      <input type="text" id="ac-desc" inputmode="numeric" placeholder="Calculado auto" readonly style="opacity:.7;">
+    </div>
+    <div>
+      <label class="form-label">Data do acordo</label>
+      <input type="date" id="ac-data-acordo">
     </div>
   </div>
 

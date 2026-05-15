@@ -681,8 +681,10 @@ function rDividas(el){
       var bDelAc=document.createElement('button');bDelAc.style.cssText='background:rgba(255,68,102,.1);border:none;border-radius:6px;padding:3px 8px;font-size:10px;color:#ff4466;cursor:pointer;';bDelAc.textContent='Excluir acordo';bDelAc.addEventListener('click',(function(id){return function(){excluirAcordo(id);};})(div.id));
       acBtns.appendChild(bEditAc);acBtns.appendChild(bDelAc);acHdrEl.appendChild(acTit);acHdrEl.appendChild(acBtns);acDiv.appendChild(acHdrEl);
       var acBody=document.createElement('div');
-      acBody.innerHTML='<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Valor negociado</span><span style="color:var(--text);font-weight:600;">'+fR(ac.valorTotal)+'</span></div>'
-        +(ac.desconto?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Desconto obtido</span><span style="color:#00d4ff;font-weight:600;">'+fR(ac.desconto)+'</span></div>':'')
+      acBody.innerHTML='<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Valor do acordo</span><span style="color:var(--text);font-weight:600;">'+fR(ac.valorTotal)+'</span></div>'
+        +(ac.entrada?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Entrada paga</span><span style="color:#00d4ff;font-weight:600;">'+fR(ac.entrada)+'</span></div>':'')
+        +(ac.desconto?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Desconto obtido</span><span style="color:#4ade80;font-weight:600;">'+fR(ac.desconto)+'</span></div>':'')
+        +(ac.dataAcordo?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text3);">Data do acordo</span><span style="color:var(--text);font-weight:600;">'+fData(ac.dataAcordo)+'</span></div>':'')
         +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;"><span style="color:var(--text3);">Parcelas pagas</span><span style="color:var(--text);font-weight:600;">'+parcPagas+' / '+ac.parcTotal+'</span></div>'
         +'<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;width:'+pct+'%;background:#60a5fa;border-radius:3px;"></div></div>'
         +'<div style="font-size:10px;color:var(--text3);">'+pct.toFixed(0)+'% quitado \xb7 Parcela: '+fR(ac.valorParc)+(ac.protocolo?' \xb7 Prot: '+ac.protocolo:'')+(ac.proxVenc?' \xb7 Prox: '+fData(ac.proxVenc):'')+'</div>';
@@ -1027,8 +1029,9 @@ function selDivStatus(id){divStatusSel=id;bDivStatusGrid();}
 // --- ACORDO ---
 function abreAcordo(id){
   editDividaId=id;var e;
-  ['ac-total','ac-desc','ac-parc','ac-valparc','ac-dia','ac-protocolo'].forEach(function(eid){e=document.getElementById(eid);if(e)e.value='';});
+  ['ac-total','ac-entrada','ac-desc','ac-parc','ac-valparc','ac-dia','ac-protocolo'].forEach(function(eid){e=document.getElementById(eid);if(e)e.value='';});
   e=document.getElementById('ac-primeiro');if(e)e.value=dataHoje();
+  e=document.getElementById('ac-data-acordo');if(e)e.value=dataHoje();
   var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
   if(div){e=document.getElementById('sh-acordo-credor');if(e)e.textContent=div.credor;e=document.getElementById('sh-acordo-orig');if(e)e.textContent=fR(div.valorAtual||div.valorOriginal||0);}
   abM('sh-acordo');
@@ -1038,33 +1041,49 @@ function abreEditAcordo(id){
   var d=gd(),div=d.dividas.find(function(x){return x.id===id;});if(!div||!div.acordo)return;
   var ac=div.acordo,e;
   e=document.getElementById('ac-total');if(e)e.value=fR(ac.valorTotal||0).replace('R$ ','');
+  e=document.getElementById('ac-entrada');if(e)e.value=fR(ac.entrada||0).replace('R$ ','');
   e=document.getElementById('ac-desc');if(e)e.value=fR(ac.desconto||0).replace('R$ ','');
   e=document.getElementById('ac-parc');if(e)e.value=ac.parcTotal||'';
   e=document.getElementById('ac-valparc');if(e)e.value=fR(ac.valorParc||0).replace('R$ ','');
   e=document.getElementById('ac-dia');if(e)e.value=ac.diaVenc||'';
   e=document.getElementById('ac-primeiro');if(e)e.value=ac.proxVenc||'';
+  e=document.getElementById('ac-data-acordo');if(e)e.value=ac.dataAcordo||'';
   e=document.getElementById('ac-protocolo');if(e)e.value=ac.protocolo||'';
   var info=document.getElementById('sh-acordo-credor');if(info)info.textContent=div.credor;
   var orig=document.getElementById('sh-acordo-orig');if(orig)orig.textContent=fR(div.valorAtual||div.valorOriginal||0);
   abM('sh-acordo');
 }
 function salvaAcordo(){
-  var total=pv('ac-total');if(!total){toast('Informe o valor negociado','err');return;}
+  var total=pv('ac-total');if(!total){toast('Informe o valor do acordo','err');return;}
+  var entrada=pv('ac-entrada')||0;
   var parc=parseInt(document.getElementById('ac-parc').value)||1;
   var diaVenc=parseInt(document.getElementById('ac-dia').value)||10;
   var proxVenc=document.getElementById('ac-primeiro').value;if(!proxVenc){toast('Informe a data da 1a parcela','err');return;}
+  var dataAcordo=document.getElementById('ac-data-acordo').value||dataHoje();
   var protocolo=document.getElementById('ac-protocolo').value.trim();
-  var desconto=pv('ac-desc')||0;
-  var valorParc=Math.round((total/parc)*100)/100;
+  var restante=Math.max(0,total-entrada);
+  var valorParc=Math.round((restante/parc)*100)/100;
   var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});if(!div)return;
+  var orig=div.valorAtual||div.valorOriginal||0;
+  var desconto=Math.max(0,orig-total);
   var parcPagasExist=div.acordo&&div.acordo.parcPagas?div.acordo.parcPagas:[];
   div.status='acordo';
-  div.acordo={ativo:true,valorTotal:total,desconto:desconto,parcTotal:parc,valorParc:valorParc,diaVenc:diaVenc,proxVenc:proxVenc,protocolo:protocolo,parcPagas:parcPagasExist,dataCad:dataHoje()};
+  div.acordo={ativo:true,valorTotal:total,entrada:entrada,desconto:desconto,parcTotal:parc,valorParc:valorParc,diaVenc:diaVenc,proxVenc:proxVenc,dataAcordo:dataAcordo,protocolo:protocolo,parcPagas:parcPagasExist,dataCad:dataHoje()};
   save(d);fcM('sh-acordo');toast('Acordo salvo!','ok');editDividaId=null;renderPag();
 }
 function calcValParc(){
-  var total=pv('ac-total'),parc=parseInt(document.getElementById('ac-parc').value)||0;
-  var e=document.getElementById('ac-valparc');if(e&&total>0&&parc>0)e.value=fR(total/parc).replace('R$ ','');
+  var total=pv('ac-total');
+  var entrada=pv('ac-entrada')||0;
+  var parc=parseInt(document.getElementById('ac-parc').value)||0;
+  var restante=Math.max(0,total-entrada);
+  var eValParc=document.getElementById('ac-valparc');
+  if(eValParc&&total>0&&parc>0)eValParc.value=fR(restante/parc).replace('R$ ','');
+  // calcular desconto automaticamente se tiver valor original da divida
+  var eDesc=document.getElementById('ac-desc');
+  if(eDesc&&total>0){
+    var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
+    if(div){var orig=div.valorAtual||div.valorOriginal||0;var desc=Math.max(0,orig-total);eDesc.value=desc>0?fR(desc).replace('R$ ',''):'';}  
+  }
 }
 
 // --- RELATORIO ---
