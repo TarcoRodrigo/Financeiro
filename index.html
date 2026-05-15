@@ -329,22 +329,25 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     <div>
       <label class="form-label">Valor do acordo (R$)</label>
-      <input type="text" id="ac-total" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
+      <input type="text" id="ac-total" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcDesconto()">
     </div>
     <div>
       <label class="form-label">Entrada paga (R$)</label>
-      <input type="text" id="ac-entrada" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcValParc()">
+      <input type="text" id="ac-entrada" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
     </div>
   </div>
+
+  <label class="form-label">Conta usada na entrada</label>
+  <select id="ac-conta-entrada"></select>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
     <div>
       <label class="form-label">Numero de parcelas</label>
-      <input type="number" id="ac-parc" placeholder="Ex: 12" min="1" oninput="calcValParc()">
+      <input type="number" id="ac-parc" placeholder="Ex: 12" min="1">
     </div>
     <div>
       <label class="form-label">Valor por parcela (R$)</label>
-      <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" oninput="mask(this);calcDesconto()">
+      <input type="text" id="ac-valparc" inputmode="numeric" placeholder="0,00" oninput="mask(this)">
     </div>
   </div>
 

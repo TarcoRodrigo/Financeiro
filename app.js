@@ -1034,6 +1034,8 @@ function abreAcordo(id){
   e=document.getElementById('ac-data-acordo');if(e)e.value=dataHoje();
   var d=gd(),div=d.dividas.find(function(x){return x.id===id;});
   if(div){e=document.getElementById('sh-acordo-credor');if(e)e.textContent=div.credor;e=document.getElementById('sh-acordo-orig');if(e)e.textContent=fR(div.valorAtual||div.valorOriginal||0);}
+  var sel=document.getElementById('ac-conta-entrada');
+  if(sel){sel.innerHTML='<option value="">Nao descontar de nenhuma conta</option>'+d.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');}
   abM('sh-acordo');
 }
 function abreEditAcordo(id){
@@ -1051,6 +1053,11 @@ function abreEditAcordo(id){
   e=document.getElementById('ac-protocolo');if(e)e.value=ac.protocolo||'';
   var info=document.getElementById('sh-acordo-credor');if(info)info.textContent=div.credor;
   var orig=document.getElementById('sh-acordo-orig');if(orig)orig.textContent=fR(div.valorAtual||div.valorOriginal||0);
+  var d2=gd();
+  var sel=document.getElementById('ac-conta-entrada');
+  if(sel){sel.innerHTML='<option value="">Nao descontar de nenhuma conta</option>'+d2.contas.map(function(c){var b=banco(c.banco);return'<option value="'+c.id+'">'+(c.nome||b.nome)+' ('+fRs(c.saldo||0)+')</option>';}).join('');
+    if(ac.contaEntradaId){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===ac.contaEntradaId){sel.selectedIndex=i;break;}}}
+  }
   abM('sh-acordo');
 }
 function salvaAcordo(){
@@ -1061,28 +1068,34 @@ function salvaAcordo(){
   var proxVenc=document.getElementById('ac-primeiro').value;if(!proxVenc){toast('Informe a data da 1a parcela','err');return;}
   var dataAcordo=document.getElementById('ac-data-acordo').value||dataHoje();
   var protocolo=document.getElementById('ac-protocolo').value.trim();
-  var restante=Math.max(0,total-entrada);
-  var valorParc=Math.round((restante/parc)*100)/100;
+  var valorParc=pv('ac-valparc');
+  if(!valorParc){toast('Informe o valor por parcela','err');return;}
   var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});if(!div)return;
   var orig=div.valorAtual||div.valorOriginal||0;
   var desconto=Math.max(0,orig-total);
   var parcPagasExist=div.acordo&&div.acordo.parcPagas?div.acordo.parcPagas:[];
+  var contaEntradaId=document.getElementById('ac-conta-entrada').value||'';
   div.status='acordo';
-  div.acordo={ativo:true,valorTotal:total,entrada:entrada,desconto:desconto,parcTotal:parc,valorParc:valorParc,diaVenc:diaVenc,proxVenc:proxVenc,dataAcordo:dataAcordo,protocolo:protocolo,parcPagas:parcPagasExist,dataCad:dataHoje()};
+  div.acordo={ativo:true,valorTotal:total,entrada:entrada,contaEntradaId:contaEntradaId,desconto:desconto,parcTotal:parc,valorParc:valorParc,diaVenc:diaVenc,proxVenc:proxVenc,dataAcordo:dataAcordo,protocolo:protocolo,parcPagas:parcPagasExist,dataCad:dataHoje()};
+  // registrar entrada como saida se valor > 0
+  if(entrada>0){
+    var txEntrada={id:uid(),desc:'Entrada acordo - '+div.credor,tipo:'despesa',valor:entrada,data:dataAcordo,fixo:'variavel',cat:'outros',dataCad:dataHoje(),pagamentoDivida:true};
+    if(contaEntradaId){
+      txEntrada.contaId=contaEntradaId;
+      var cEnt=d.contas.find(function(x){return x.id===contaEntradaId;});
+      if(cEnt)cEnt.saldo-=entrada;
+    }
+    d.transacoes.push(txEntrada);
+  }
   save(d);fcM('sh-acordo');toast('Acordo salvo!','ok');editDividaId=null;renderPag();
 }
-function calcValParc(){
+function calcValParc(){calcDesconto();}
+function calcDesconto(){
   var total=pv('ac-total');
-  var entrada=pv('ac-entrada')||0;
-  var parc=parseInt(document.getElementById('ac-parc').value)||0;
-  var restante=Math.max(0,total-entrada);
-  var eValParc=document.getElementById('ac-valparc');
-  if(eValParc&&total>0&&parc>0)eValParc.value=fR(restante/parc).replace('R$ ','');
-  // calcular desconto automaticamente se tiver valor original da divida
   var eDesc=document.getElementById('ac-desc');
   if(eDesc&&total>0){
     var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
-    if(div){var orig=div.valorAtual||div.valorOriginal||0;var desc=Math.max(0,orig-total);eDesc.value=desc>0?fR(desc).replace('R$ ',''):'';}  
+    if(div){var orig=div.valorAtual||div.valorOriginal||0;var desc=Math.max(0,orig-total);eDesc.value=desc>0?fR(desc).replace('R$ ',''):';'}
   }
 }
 
