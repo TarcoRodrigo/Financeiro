@@ -1091,11 +1091,18 @@ function salvaAcordo(){
 }
 function calcValParc(){calcDesconto();}
 function calcDesconto(){
-  var total=pv('ac-total');
-  var eDesc=document.getElementById('ac-desc');
-  if(eDesc&&total>0){
-    var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
-    if(div){var orig=div.valorAtual||div.valorOriginal||0;var desc=Math.max(0,orig-total);eDesc.value=desc>0?fR(desc).replace('R$ ',''):';'}
+  var eDesc=document.getElementById('ac-desc');if(!eDesc)return;
+  var entrada=pv('ac-entrada')||0;
+  var parc=parseInt(document.getElementById('ac-parc').value)||0;
+  var valParc=pv('ac-valparc')||0;
+  var totalPago=entrada+(parc*valParc);
+  var d=gd(),div=d.dividas.find(function(x){return x.id===editDividaId;});
+  if(div&&totalPago>0){
+    var orig=div.valorAtual||div.valorOriginal||0;
+    var desc=Math.max(0,orig-totalPago);
+    eDesc.value=desc>0?fR(desc).replace('R$ ',''):'';
+  } else {
+    eDesc.value='';
   }
 }
 
